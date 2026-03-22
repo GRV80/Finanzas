@@ -1,6 +1,6 @@
 {
   "name": "app-gastos-desktop",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "App de gastos de escritorio con auto-update en Electron.",
   "main": "electron/main.js",
   "author": "Usuario",
@@ -23,7 +23,7 @@
   "build": {
     "appId": "com.usuario.appgastos",
     "productName": "App Gastos Pro",
-    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "artifactName": "App-Gastos-Pro-Setup-${version}.${ext}",
     "files": [
       "app.js",
       "index.html",
