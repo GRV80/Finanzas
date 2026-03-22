@@ -47,7 +47,6 @@ const dashboardPanel = document.getElementById("dashboardPanel");
 const dashboardBody = document.getElementById("dashboardBody");
 const toggleDashboard = document.getElementById("toggleDashboard");
 
-const backgroundColorInput = document.getElementById("backgroundColor");
 const backgroundUrlInput = document.getElementById("backgroundUrl");
 const backgroundUrlApply = document.getElementById("backgroundUrlApply");
 const backgroundFileBtn = document.getElementById("backgroundFileBtn");
@@ -113,12 +112,12 @@ const categories = [
 const types = ["Gasto", "Ingreso"];
 
 const baseColumns = [
+  { key: "fecha", label: "Fecha / Hora", type: "datetime" },
   { key: "tipo", label: "Tipo", type: "select", fixed: true },
   { key: "nombre", label: "Nombre", type: "text", fixed: true },
   { key: "categoria", label: "Categoría", type: "select" },
   { key: "cantidad", label: "Cantidad", type: "number", fixed: true },
   { key: "descripcion", label: "Descripción", type: "text" },
-  { key: "fecha", label: "Fecha / Hora", type: "datetime" },
 ];
 
 const columns = baseColumns.map(col => ({ ...col }));
@@ -134,7 +133,6 @@ let lastDeleted = null;
 
 let settings = {
   theme: "blue",
-  backgroundColor: "",
   backgroundImage: "",
   customColumns: [],
 };
@@ -159,7 +157,7 @@ let tableSort = {
 
 function setDesktopUpdateState(message, mode = "idle") {
   if (updateStatus) {
-    updateStatus.textContent = mode === "idle" ? "" : message;
+    updateStatus.textContent = message || "";
     updateStatus.dataset.mode = mode;
   }
 
@@ -199,7 +197,7 @@ async function initializeDesktopShell() {
   }
 
   setDesktopUpdateState(
-    meta.updatesEnabled ? "" : "Actualizaciones no configuradas.",
+    meta.updatesEnabled ? "Actualizaciones listas para comprobar." : "Actualizaciones no configuradas.",
     meta.updatesEnabled ? "idle" : "disabled"
   );
 
@@ -568,22 +566,24 @@ function getCssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "";
 }
 
+function syncBackgroundControls() {
+  if (backgroundUrlInput) {
+    backgroundUrlInput.value =
+      settings.backgroundImage && (settings.backgroundImage.startsWith("http") || settings.backgroundImage.startsWith("data:"))
+        ? settings.backgroundImage
+        : "";
+  }
+}
+
 function applyBackground() {
   if (settings.backgroundImage) {
     const safeUrl = String(settings.backgroundImage).replace(/"/g, "%22");
-    document.body.style.backgroundColor = settings.backgroundColor || getCssVar("--background") || "#ffffff";
+    document.body.style.backgroundColor = getCssVar("--background") || "#ffffff";
     document.body.style.backgroundImage = `url("${safeUrl}")`;
     document.body.style.backgroundSize = "cover";
     document.body.style.backgroundRepeat = "no-repeat";
     document.body.style.backgroundPosition = "center center";
     document.body.style.backgroundAttachment = "fixed";
-  } else if (settings.backgroundColor) {
-    document.body.style.backgroundImage = "";
-    document.body.style.backgroundSize = "";
-    document.body.style.backgroundRepeat = "";
-    document.body.style.backgroundPosition = "";
-    document.body.style.backgroundAttachment = "";
-    document.body.style.backgroundColor = settings.backgroundColor;
   } else {
     document.body.style.backgroundImage = "";
     document.body.style.backgroundSize = "";
@@ -592,6 +592,8 @@ function applyBackground() {
     document.body.style.backgroundAttachment = "";
     document.body.style.backgroundColor = getCssVar("--background") || "";
   }
+
+  syncBackgroundControls();
 }
 
 function applyTheme(theme) {
@@ -2685,9 +2687,6 @@ if (dashboardTheme) {
   dashboardTheme.value = settings.theme || "blue";
 }
 applyTheme(settings.theme);
-if (backgroundColorInput) {
-  backgroundColorInput.value = settings.backgroundColor || "";
-}
 if (backgroundUrlInput && settings.backgroundImage) {
   if (settings.backgroundImage.startsWith("http") || settings.backgroundImage.startsWith("data:")) {
     backgroundUrlInput.value = settings.backgroundImage;
@@ -2745,21 +2744,11 @@ if (headerResetTheme) {
   });
 }
 
-if (backgroundColorInput) {
-  backgroundColorInput.addEventListener("input", () => {
-    settings.backgroundColor = backgroundColorInput.value;
-    settings.backgroundImage = "";
-    saveSettings();
-    applyBackground();
-  });
-}
-
 if (backgroundUrlApply && backgroundUrlInput) {
   const applyBackgroundUrl = () => {
     const url = backgroundUrlInput.value.trim();
     if (!url) return;
     settings.backgroundImage = url;
-    settings.backgroundColor = "";
     saveSettings();
     applyBackground();
   };
@@ -2787,7 +2776,6 @@ if (backgroundFileBtn && backgroundFileInput) {
     reader.onload = () => {
       const dataUrl = reader.result;
       settings.backgroundImage = dataUrl;
-      settings.backgroundColor = "";
       saveSettings();
       applyBackground();
     };
@@ -2798,7 +2786,6 @@ if (backgroundFileBtn && backgroundFileInput) {
 
 if (backgroundClear) {
   backgroundClear.addEventListener("click", () => {
-    settings.backgroundColor = "";
     settings.backgroundImage = "";
     saveSettings();
     applyBackground();
