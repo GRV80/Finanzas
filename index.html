@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App de Gastos</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-hero">
+    <section class="desktop-shell" id="desktopShell" hidden>
+      <div class="desktop-shell-copy">
+        <strong id="desktopVersion">Version web</strong>
+        <span id="updateStatus"></span>
+      </div>
+      <div class="desktop-shell-actions">
+        <button type="button" id="createShortcutBtn" class="secondary-button">Acceso directo</button>
+        <button type="button" id="checkUpdatesBtn" class="secondary-button">Actualizar</button>
+        <button type="button" id="downloadUpdateBtn" hidden>Descargar</button>
+        <button type="button" id="installUpdateBtn" hidden>Instalar</button>
+      </div>
+    </section>
+    <div class="app-hero-copy">
+      <p class="app-kicker">Panel financiero personal</p>
+      <h1>Centro de Control Económico</h1>
+    </div>
+    <div class="hero-theme-controls">
+      <label>
+        Tema:
+        <select id="headerThemeSelect">
+          <option value="blue" selected>Azul</option>
+          <option value="green">Verde</option>
+          <option value="orange">Naranja</option>
+          <option value="purple">Morado</option>
+          <option value="dark">Oscuro</option>
+          <option value="red">Rojo</option>
+          <option value="teal">Verde azulado</option>
+          <option value="gray">Gris</option>
+          <option value="neutral">Neutro</option>
+          <option value="gold">Dorado</option>
+          <option value="rose">Rosa</option>
+          <option value="ocean">Océano</option>
+        </select>
+      </label>
+      <button type="button" id="headerResetTheme" class="secondary-button">Restablecer tema</button>
+    </div>
+    <div class="background-controls">
+      <label>
+        Fondo (color):
+        <input type="color" id="backgroundColor" title="Color de fondo">
+      </label>
+      <label>
+        Fondo (URL):
+        <input type="url" id="backgroundUrl" placeholder="https://...">
+      </label>
+      <button type="button" id="backgroundUrlApply">Aplicar</button>
+      <button type="button" id="backgroundFileBtn">Imagen</button>
+      <input type="file" id="backgroundFile" accept="image/*" style="display:none">
+      <button type="button" id="backgroundClear">Limpiar</button>
+    </div>
+  </header>
+
+  <section class="panel" id="entriesPanel">
+    <div class="panel-header">
+      <div>
+        <h2>Registro de la Contabilidad</h2>
+      </div>
+      <div class="panel-actions">
+        <button type="button" id="btnExport">Exportar</button>
+        <button type="button" id="btnImport">Importar</button>
+        <button type="button" id="btnRestore" class="secondary-button">Restablecer</button>
+        <button type="button" id="btnClear">Vaciar</button>
+        <button type="button" class="panel-toggle" id="toggleEntries">Ocultar</button>
+        <input type="file" id="importFile" accept="*/*,.json,.csv,.txt" multiple style="display:none" />
+      </div>
+    </div>
+    <div class="panel-body" id="entriesBody">
+      <div class="entry-capture-panel">
+        <div class="entry-capture-head">
+          <div id="entryFormLabels" class="entry-form-labels"></div>
+        </div>
+        <form id="gastosForm" class="entry-form-row"></form>
+        <div id="formFeedback" class="form-feedback entry-feedback" hidden></div>
+        <div class="entry-controls-row">
+          <input type="text" id="newColumnName" placeholder="Nueva columna (ej: Proyecto)" autocomplete="off">
+          <button type="button" id="btnAddColumn">Agregar columna</button>
+          <button type="button" id="btnAddRow">Nueva fila</button>
+          <button type="button" id="btnUndo" style="display: none;">Deshacer</button>
+        </div>
+      </div>
+      <div class="entries-toolbar">
+        <input type="search" id="searchInput" placeholder="Buscar artículo o movimiento..." autocomplete="off">
+        <button type="button" id="searchButton">Buscar</button>
+        <div class="date-filter-pills" id="filterDateMode">
+          <button type="button" class="date-filter-pill is-active" data-mode="all">Todos</button>
+          <button type="button" class="date-filter-pill" data-mode="day">Día</button>
+          <button type="button" class="date-filter-pill" data-mode="month">Mes</button>
+          <button type="button" class="date-filter-pill" data-mode="year">Año</button>
+        </div>
+        <select id="filterDay">
+          <option value="">Día</option>
+        </select>
+        <select id="filterMonth">
+          <option value="">Mes</option>
+        </select>
+        <select id="filterYear">
+          <option value="">Año</option>
+        </select>
+        <button type="button" id="clearFilters" class="secondary-button">Limpiar filtros</button>
+      </div>
+      <div class="entries-summary" id="entriesSummary">Mostrando todos los registros.</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Nombre</th>
+            <th>
+              <div class="th-with-control">
+                <span>Categoría</span>
+              </div>
+            </th>
+            <th>
+              <div class="th-with-control">
+                <span>Cantidad</span>
+                <select id="sortAmount" class="header-sort">
+                  <option value="default">Volver</option>
+                  <option value="desc">Mayor</option>
+                  <option value="asc">Menor</option>
+                </select>
+              </div>
+            </th>
+            <th>
+              <div class="th-with-control">
+                <span>Descripción</span>
+              </div>
+            </th>
+            <th>
+              <div class="th-with-control">
+                <span>Fecha</span>
+                <select id="sortDate" class="header-sort">
+                  <option value="default">Volver</option>
+                  <option value="oldest">Antiguas</option>
+                  <option value="newest">Nuevas</option>
+                  <option value="current">F actual</option>
+                </select>
+              </div>
+            </th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-body"></tbody>
+      </table>
+
+      <div class="totals">
+        <div>Ingresos: <span id="total-income">0</span> €</div>
+        <div>Gastos: <span id="total-expense">0</span> €</div>
+        <div>Saldo: <span id="total">0</span> €</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="almanaquePanelSection">
+    <div class="panel-header">
+      <h2>Almanaque</h2>
+      <div class="panel-actions">
+        <button type="button" id="btnExportAlmanaque">Exportar resumen</button>
+        <label class="inline-attach-control">
+          <span>Adjuntar</span>
+          <select id="almanaqueAttachmentType">
+            <option value="Adjunto" selected>Adjunto</option>
+            <option value="Factura">Factura</option>
+            <option value="Imagen">Imagen</option>
+            <option value="Documento">Documento</option>
+            <option value="PDF">PDF</option>
+            <option value="Tributo">Tributo</option>
+            <option value="Precio">Precio</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </label>
+        <button type="button" class="panel-toggle" id="toggleAlmanaque">Ocultar</button>
+      </div>
+    </div>
+    <div class="panel-body" id="almanaquePanel">
+      <div class="almanaque-controls">
+        <label>
+          Vista:
+          <select id="almanaqueViewMode">
+            <option value="year">Todo el año</option>
+            <option value="month" selected>Todo el mes</option>
+            <option value="day">Día</option>
+          </select>
+        </label>
+        <label>
+          Año:
+          <select id="almanaqueYear"></select>
+        </label>
+        <label>
+          Mes:
+          <select id="almanaqueMonth"></select>
+        </label>
+        <label>
+          Día:
+          <select id="almanaqueDay"></select>
+        </label>
+        <button type="button" id="almanaqueViewDay" class="small">Ver</button>
+        <input type="file" id="almanaqueAttachmentFile" multiple style="display:none" />
+      </div>
+
+      <div class="entries-summary" id="almanaqueSummary">Mostrando todos los movimientos del mes seleccionado.</div>
+
+      <div id="almanaqueDayDetails" class="almanaque-day-details" style="display:none; margin-bottom:12px;">
+        <div>
+          <strong>Movimientos del día:</strong>
+          <input type="date" id="selectedDayInput" />
+          <button type="button" id="applySelectedDay" class="small">Ver</button>
+          <button type="button" id="exportDayAttachments" class="small">Exportar adjuntos</button>
+        </div>
+        <div id="selectedDayList" class="selected-day-table-wrap"></div>
+        <button type="button" id="clearDayView" class="small">Limpiar vista diaria</button>
+      </div>
+
+      <table class="almanaque-table">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Cantidad</th>
+            <th>Descripción</th>
+            <th>Fecha / Hora</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="almanaqueBody"></tbody>
+      </table>
+      <div class="totals">
+        <div>Ingresos: <span id="almanaque-income">0</span> €</div>
+        <div>Gastos: <span id="almanaque-expense">0</span> €</div>
+        <div>Saldo: <span id="almanaque-total">0</span> €</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel dashboard" id="dashboardPanel">
+    <div class="panel-header">
+      <h2>Dashboard</h2>
+      <div class="panel-actions">
+        <button type="button" id="btnExportDashboard">Exportar resumen</button>
+        <button type="button" class="panel-toggle" id="toggleDashboard">Ocultar</button>
+      </div>
+    </div>
+    <div class="panel-body" id="dashboardBody">
+      <div class="dashboard-controls">
+      <label>
+        Periodo:
+        <select id="dashboardPeriod">
+          <option value="day">Diario</option>
+          <option value="month" selected>Mensual</option>
+          <option value="year">Anual</option>
+        </select>
+      </label>
+
+      <label>
+        Fecha:
+        <div class="date-nav">
+          <button type="button" id="dashboardPrev" aria-label="Anterior">&lt;</button>
+          <input type="date" id="dashboardDate">
+          <button type="button" id="dashboardNext" aria-label="Siguiente">&gt;</button>
+        </div>
+      </label>
+
+      <label>
+        Métrica:
+        <select id="dashboardMetric">
+          <option value="balance" selected>Saldo por categoría</option>
+          <option value="ingresos">Ingresos por categoría</option>
+          <option value="gastos">Gastos por categoría</option>
+          <option value="count">Transacciones por categoría</option>
+          <option value="average">Promedio por categoría</option>
+          <option value="flow">Flujo acumulado</option>
+          <option value="ingresos_gastos">Ingresos vs Gastos</option>
+          <option value="comparative">Comparativa temporal</option>
+          <option value="highest">Mayor movimiento</option>
+          <option value="lowest">Menor movimiento</option>
+          <option value="networth">Balance neto del periodo</option>
+          <option value="savings_rate">Tasa de ahorro</option>
+        </select>
+      </label>
+
+      <label>
+        Tema:
+        <select id="dashboardTheme">
+          <option value="blue" selected>Azul</option>
+          <option value="green">Verde</option>
+          <option value="orange">Naranja</option>
+          <option value="purple">Morado</option>
+          <option value="dark">Oscuro</option>
+          <option value="red">Rojo</option>
+          <option value="teal">Verde Azulado</option>
+          <option value="gray">Gris</option>
+          <option value="neutral">Neutro</option>
+          <option value="gold">Dorado</option>
+          <option value="rose">Rosa</option>
+          <option value="ocean">Océano</option>
+        </select>
+      </label>
+      <button type="button" id="resetTheme" class="reset-theme">Restablecer tema</button>
+    </div>
+
+    <div class="dashboard-layout">
+      <div class="dashboard-left">
+        <div class="dashboard-cards">
+          <div class="card">
+            <div class="card-title">Ingresos</div>
+            <div class="card-value" id="dashboardIncome">0 €</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Gastos</div>
+            <div class="card-value" id="dashboardExpense">0 €</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Saldo</div>
+            <div class="card-value" id="dashboardBalance">0 €</div>
+          </div>
+        </div>
+
+        <div class="dashboard-metric-card">
+          <div class="card-title" id="dashboardMetricTitle">Métrica</div>
+          <div class="card-value" id="dashboardMetricValue">0</div>
+        </div>
+      </div>
+
+      <div class="dashboard-right">
+        <div class="dashboard-chart">
+          <canvas id="dashboardChart" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+    <button type="button" id="dashboardBackToTop" class="dashboard-back-top" aria-label="Volver arriba">↑</button>
+  </section>
+
+  <script src="./node_modules/chart.js/dist/chart.umd.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

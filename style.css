@@ -1,0 +1,1104 @@
+:root {
+  --background: #ffffff;
+  --primary: #1e7fe2;
+  --primary-dark: #1664c8;
+  --card-bg: #f3f6f4;
+  --card-border: #d0d7d3;
+  --panel-bg: #f3f6f4;
+  --panel-border: #d0d7d3;
+  --table-bg: #ffffff;
+  --table-header: #f0f3f8;
+  --table-row-alt: rgba(0, 0, 0, 0.03);
+  --table-border: #d0d7d3;
+  --text: #222;
+  --muted: #555;
+}
+
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  max-width: 1200px;
+  margin: auto;
+  padding: 24px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(30, 127, 226, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 246, 244, 0.96));
+}
+
+.app-hero {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 18px;
+  align-items: start;
+  padding: 22px;
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fdfefe, #eef5fb);
+  box-shadow: 0 14px 38px rgba(27, 53, 87, 0.08);
+}
+
+.desktop-shell {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+}
+
+.desktop-shell-copy {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.desktop-shell-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.desktop-shell .secondary-button,
+.desktop-shell button:not(.secondary-button) {
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+  box-shadow: none;
+}
+
+#updateStatus:empty {
+  display: none;
+}
+
+.hero-theme-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.hero-theme-controls label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.app-kicker {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.app-hero h1 {
+  margin: 0 0 10px;
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1.08;
+}
+
+.app-subtitle {
+  margin: 0;
+  max-width: 760px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.app-hero-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-start;
+  align-content: flex-start;
+}
+
+.hero-pill {
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: rgba(30, 127, 226, 0.1);
+  border: 1px solid rgba(30, 127, 226, 0.18);
+  color: #164973;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form-feedback {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--card-bg);
+}
+
+.entry-feedback {
+  margin-bottom: 0;
+}
+
+.form-feedback[data-tone="success"] {
+  border-color: #2e7d32;
+  color: #1f5d23;
+}
+
+.form-feedback[data-tone="warning"] {
+  border-color: #ef6c00;
+  color: #8a4b00;
+}
+
+.panel {
+  margin-top: 16px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+}
+
+.dashboard-chart {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  padding: 14px;
+  border-radius: 10px;
+}
+
+.almanaque {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+}
+
+.almanaque-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--table-bg);
+}
+
+.almanaque-table th,
+.almanaque-table td {
+  padding: 8px;
+  border: 1px solid var(--table-border);
+  text-align: left;
+  color: var(--text);
+}
+
+.almanaque-table th {
+  background: var(--table-header);
+}
+
+.almanaque-table tr:nth-child(even) {
+  background: var(--table-row-alt);
+}
+
+.almanaque-table button.almanaque-clear {
+  margin-left: 6px;
+  background: #d32f2f;
+}
+
+.almanaque-table button.almanaque-clear:hover {
+  background: #b71c1c;
+}
+
+.almanaque-selected-day {
+  background-color: rgba(30, 126, 226, 0.15);
+  border: 1px solid var(--primary);
+}
+
+.almanaque-day-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px;
+  border: 1px solid var(--table-border);
+  margin-bottom: 8px;
+  border-radius: 6px;
+  background: var(--card-bg);
+}
+
+.almanaque-day-info {
+  flex: 1;
+  min-width: 200px;
+}
+
+.almanaque-day-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.almanaque-day-instructions {
+  background: rgba(255, 235, 59, 0.18);
+  border: 1px solid #fdd835;
+  border-radius: 6px;
+  color: #5d4300;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.almanaque-day-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.almanaque-attachment-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 140px;
+  word-break: break-word;
+}
+
+@media (max-width: 900px) {
+  .app-hero,
+  .desktop-shell {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .desktop-shell-actions {
+    justify-content: stretch;
+  }
+}
+
+.almanaque-attachment-thumb {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--table-border);
+}
+
+.almanaque-attachment-link {
+  font-size: 12px;
+  color: var(--primary);
+  text-decoration: underline;
+  word-break: break-word;
+}
+
+.almanaque-day-action {
+  margin-left: 4px;
+  margin-top: 4px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.almanaque-day-action:hover {
+  background: var(--primary-dark);
+}
+
+.almanaque-drop-active {
+  border: 2px dashed var(--primary);
+  background-color: rgba(30, 126, 226, 0.08);
+}
+
+.inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.inputs input,
+.inputs select {
+  min-width: 180px;
+  max-width: 260px;
+}
+
+.inputs input[type="datetime-local"] {
+  min-width: 240px;
+}
+
+.datetime-wrapper {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 108px;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.datetime-wrapper input {
+  min-width: 0;
+  max-width: none;
+  flex: 1 1 0;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.background-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  grid-column: 1 / -1;
+  padding-top: 4px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.background-controls label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+input,
+select,
+button {
+  margin: 0;
+  padding: 7px 9px;
+  font-size: 16px;
+}
+
+input {
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+}
+
+button,
+select {
+  cursor: pointer;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+button {
+  padding: 10px 16px;
+}
+
+button.secondary-button {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+  box-shadow: none;
+}
+
+button.secondary-button:hover {
+  background: var(--table-row-alt);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+button.danger-button {
+  background: #d32f2f;
+}
+
+button.danger-button:hover {
+  background: #b71c1c;
+}
+
+button:hover,
+select:hover {
+  background-color: var(--primary-dark);
+}
+
+button:active,
+select:active {
+  transform: translateY(1px);
+}
+
+.date-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-nav button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 18px;
+  border-radius: 6px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+th,
+td {
+  padding: 7px 8px;
+  border: 1px solid var(--table-border);
+  text-align: center;
+  color: var(--text);
+  vertical-align: top;
+}
+
+th {
+  background: var(--table-header);
+}
+
+.th-with-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  min-width: 100px;
+}
+
+.header-sort {
+  min-width: 96px;
+  max-width: 120px;
+  padding: 6px 10px;
+  font-size: 13px;
+  min-height: 36px;
+  box-shadow: none;
+}
+
+td.editable {
+  cursor: text;
+  word-break: break-word;
+  text-align: left;
+}
+
+td.editable:focus {
+  outline: 2px solid #4a90e2;
+}
+
+td.datetime-cell {
+  white-space: nowrap;
+  line-height: 1.15;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+.totals {
+  margin-top: 16px;
+  font-weight: 600;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.totals div {
+  min-width: 160px;
+}
+
+.dashboard {
+  margin-top: 32px;
+  position: relative;
+}
+
+.panel {
+  margin-top: 16px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.panel-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.panel-actions button {
+  padding: 0 10px;
+  min-height: 30px;
+}
+
+.panel-header h2,
+.panel-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.panel-body {
+  padding: 14px;
+}
+
+.entry-capture-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(244,247,249,0.95));
+}
+
+.entry-form-labels {
+  display: grid;
+  grid-template-columns: var(--entry-grid-template, repeat(6, minmax(88px, 1fr)) 136px);
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+  padding: 4px 0;
+}
+
+.entry-form-row {
+  display: grid;
+  grid-template-columns: var(--entry-grid-template, repeat(6, minmax(88px, 1fr)) 136px);
+  gap: 8px;
+  align-items: stretch;
+}
+
+.entry-form-row input,
+.entry-form-row select,
+.entry-form-row button {
+  width: 100%;
+  min-width: 0;
+  font-size: 13px;
+  min-height: 36px;
+}
+
+.entry-form-field {
+  min-width: 0;
+}
+
+.entry-form-action {
+  align-self: stretch;
+}
+
+.entry-form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding-left: 0;
+}
+
+.entry-form-action-primary {
+  width: 100%;
+  min-width: 0;
+  justify-self: stretch;
+  align-self: stretch;
+  padding: 0 8px;
+  font-size: 13px;
+}
+
+.entry-form-action,
+.table-actions button {
+  padding: 0 8px;
+  min-height: 30px;
+}
+
+.entry-controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.entry-controls-row input {
+  flex: 1 1 260px;
+}
+
+.entry-controls-row button {
+  flex: 0 0 auto;
+  min-width: 132px;
+}
+
+.entries-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.entries-toolbar input,
+.entries-toolbar select {
+  min-width: 120px;
+  font-size: 14px;
+  height: 36px;
+}
+
+.entries-toolbar #searchInput {
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
+.entries-toolbar #searchButton {
+  min-width: 120px;
+  padding: 7px 10px;
+  font-size: 14px;
+  height: 36px;
+}
+
+.date-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.date-filter-pill {
+  min-width: 86px;
+  padding: 7px 10px;
+  font-size: 13px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+  box-shadow: none;
+  height: 36px;
+}
+
+.date-filter-pill:hover {
+  background: var(--table-row-alt);
+}
+
+.date-filter-pill.is-active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+#filterDay[hidden],
+#filterMonth[hidden],
+#filterYear[hidden] {
+  display: none;
+}
+
+.entries-summary {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.panel-body.hidden {
+  display: none;
+}
+
+.panel-toggle {
+  font-size: 14px;
+  padding: 6px 12px;
+}
+
+.dashboard-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.dashboard-controls label {
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+
+.dashboard-controls button {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.dashboard-controls button.reset-theme {
+  background-color: var(--primary);
+  color: white;
+  border: 1px solid var(--primary);
+}
+
+.dashboard-controls button.reset-theme:hover {
+  background-color: var(--primary-dark);
+}
+
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 230px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dashboard-left {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dashboard-right {
+  min-width: 0;
+}
+
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.dashboard-cards .card {
+  border: 1px solid var(--primary);
+  background: var(--card-bg);
+}
+
+.dashboard-metric-card {
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background: var(--card-bg);
+  padding: 12px;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+
+.card-title {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.card-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.dashboard-chart {
+  background: var(--card-bg);
+  border: 1px solid var(--panel-border);
+  padding: 10px;
+  border-radius: 10px;
+  min-height: 360px;
+}
+
+.dashboard-back-top {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+
+.almanaque {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+}
+
+.almanaque h3 {
+  margin-top: 0;
+}
+
+.almanaque-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.almanaque-controls label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.inline-attach-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.inline-attach-control select {
+  min-width: 130px;
+  min-height: 36px;
+}
+
+.almanaque-view,
+.almanaque-add {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-right: 4px;
+  cursor: pointer;
+}
+
+.almanaque-view:hover,
+.almanaque-add:hover {
+  background-color: var(--primary-dark);
+}
+
+.almanaque-day-details {
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  padding: 10px;
+}
+
+.almanaque-day-details div {
+  margin-bottom: 8px;
+}
+
+.almanaque-day-list-item {
+  border-bottom: 1px dotted var(--panel-border);
+  padding: 4px 0;
+}
+
+.almanaque-day-list-item.is-editing {
+  border: 1px solid var(--primary);
+  padding: 8px;
+}
+
+.adjuntos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.adjuntos-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.adjuntos-item button {
+  padding: 2px 5px;
+  font-size: 11px;
+}
+
+.almanaque-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--table-bg);
+}
+
+.almanaque-table th,
+.almanaque-table td {
+  padding: 8px;
+  border: 1px solid var(--table-border);
+  text-align: left;
+  color: var(--text);
+}
+
+.almanaque-table th {
+  text-align: center;
+}
+
+.almanaque-table tr:nth-child(even) {
+  background: var(--table-row-alt);
+}
+
+.almanaque-table button {
+  font-size: 14px;
+  padding: 6px 10px;
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.table-actions button {
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.table-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 18px;
+}
+
+.selected-day-table-wrap {
+  overflow-x: auto;
+}
+
+.selected-day-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.selected-day-table th,
+.selected-day-table td {
+  padding: 10px 12px;
+  border: 1px solid var(--table-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.selected-day-table th {
+  text-align: center;
+  background: var(--table-header);
+}
+
+.selected-day-table .table-actions {
+  justify-content: center;
+}
+
+@media (max-width: 700px) {
+  body {
+    padding: 14px;
+  }
+
+  .app-hero {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+
+  .hero-theme-controls,
+  .background-controls {
+    width: 100%;
+  }
+
+  .entry-form-labels {
+    display: none;
+  }
+
+  .entry-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .datetime-wrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .entry-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .entry-form-actions {
+    min-width: 0;
+    padding-left: 0;
+  }
+
+  input,
+  select,
+  button {
+    font-size: 16px;
+  }
+
+  .entries-toolbar input,
+  .entries-toolbar select,
+  .entry-controls-row input,
+  .entry-form-row input,
+  .entry-form-row select {
+    min-width: 100%;
+    max-width: none;
+  }
+
+  .entries-toolbar button {
+    width: 100%;
+  }
+
+  .date-filter-pills {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .date-filter-pill {
+    width: 100%;
+  }
+
+  .panel-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .dashboard-chart {
+    min-height: 280px;
+  }
+
+  .almanaque-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .almanaque-controls label,
+  .almanaque-controls button,
+  .almanaque-day-details input,
+  .almanaque-day-details button {
+    width: 100%;
+  }
+
+  .almanaque-day-details > div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .almanaque-day-list-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .almanaque-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .dashboard-back-top {
+    position: static;
+    margin-top: 12px;
+  }
+}
