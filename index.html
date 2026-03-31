@@ -7,7 +7,40 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="app-hero">
+  <!-- Sidebar Principal -->
+  <aside class="sidebar" id="mainSidebar">
+    <div class="sidebar-header">
+      <h2 class="sidebar-title">Panel Financiero</h2>
+      <div class="sidebar-subtitle">Control Económico Personal</div>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <button class="sidebar-nav-btn active" data-panel="entriesPanel" id="sidebarBtnRegistro">
+        <span class="sidebar-icon">📊</span>
+        <span class="sidebar-text">Registro</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" data-panel="almanaquePanelSection" id="sidebarBtnAlmanaque">
+        <span class="sidebar-icon">📅</span>
+        <span class="sidebar-text">Almanaque</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" data-panel="dashboardPanel" id="sidebarBtnDashboard">
+        <span class="sidebar-icon">📈</span>
+        <span class="sidebar-text">Dashboard</span>
+      </button>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="sidebar-theme-info">
+        <span id="sidebarCurrentTheme">Natural</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Contenido Principal -->
+  <main class="main-content">
+    <header class="app-hero">
     <section class="desktop-shell" id="desktopShell" hidden>
       <div class="desktop-shell-copy">
         <strong id="desktopVersion">Version web</strong>
@@ -24,35 +57,33 @@
       <p class="app-kicker">Panel financiero personal</p>
       <h1>Control Económico</h1>
     </div>
-    <div class="hero-theme-controls">
-      <label>
-        Tema:
-        <select id="headerThemeSelect">
-          <option value="blue" selected>Azul</option>
-          <option value="green">Verde</option>
-          <option value="orange">Naranja</option>
-          <option value="purple">Morado</option>
-          <option value="dark">Oscuro</option>
-          <option value="red">Rojo</option>
-          <option value="teal">Verde azulado</option>
-          <option value="gray">Gris</option>
-          <option value="neutral">Neutro</option>
-          <option value="gold">Dorado</option>
-          <option value="rose">Rosa</option>
-          <option value="ocean">Océano</option>
-        </select>
-      </label>
-      <button type="button" id="headerResetTheme" class="secondary-button">Restablecer tema</button>
-    </div>
-    <div class="background-controls">
-      <label>
-        Fondo (URL):
-        <input type="url" id="backgroundUrl" placeholder="https://...">
-      </label>
-      <button type="button" id="backgroundUrlApply">Aplicar</button>
-      <button type="button" id="backgroundFileBtn">Imagen</button>
-      <input type="file" id="backgroundFile" accept="image/*" style="display:none">
-      <button type="button" id="backgroundClear">Limpiar</button>
+    <div class="hero-controls-stack">
+      <div class="hero-theme-controls">
+        <label>
+          Tema:
+          <select id="headerThemeSelect">
+            <option value="natural" selected>Natural</option>
+            <option value="blue">Azul</option>
+            <option value="green">Verde</option>
+            <option value="orange">Naranja</option>
+            <option value="purple">Morado</option>
+            <option value="red">Rojo</option>
+            <option value="teal">Verde azulado</option>
+            <option value="gray">Gris</option>
+            <option value="neutral">Neutro</option>
+            <option value="gold">Dorado</option>
+            <option value="rose">Rosa</option>
+            <option value="ocean">Océano</option>
+            <option value="mint">Menta</option>
+            <option value="turquoise">Turquesa</option>
+            <option value="sky">Cielo</option>
+            <option value="cornflower">Aciano</option>
+            <option value="steel">Acero</option>
+            <option value="midnight">Medianoche</option>
+          </select>
+        </label>
+        <button type="button" id="headerResetTheme" class="secondary-button">Restablecer tema</button>
+      </div>
     </div>
   </header>
 
@@ -67,7 +98,7 @@
         <button type="button" id="btnRestore" class="secondary-button">Restablecer</button>
         <button type="button" id="btnClear">Vaciar</button>
         <button type="button" class="panel-toggle" id="toggleEntries">Ocultar</button>
-        <input type="file" id="importFile" accept="*/*,.json,.csv,.txt" multiple style="display:none" />
+        <input type="file" id="importFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display:none" />
       </div>
     </div>
     <div class="panel-body" id="entriesBody">
@@ -75,7 +106,8 @@
         <div class="entry-capture-head">
           <div id="entryFormLabels" class="entry-form-labels"></div>
         </div>
-        <form id="gastosForm" class="entry-form-row"></form>
+        <form id="gastosForm" class="entry-form-row"><input type="file" id="importAlmanaqueFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display: none;">
+</form>
         <div id="formFeedback" class="form-feedback entry-feedback" hidden></div>
         <div class="entry-controls-row">
           <input type="text" id="newColumnName" placeholder="Nueva columna (ej: Proyecto)" autocomplete="off">
@@ -159,21 +191,10 @@
     <div class="panel-header">
       <h2>Almanaque</h2>
       <div class="panel-actions">
-        <button type="button" id="btnExportAlmanaque">Exportar resumen</button>
-        <label class="inline-attach-control">
-          <span>Adjuntar</span>
-          <select id="almanaqueAttachmentType">
-            <option value="Adjunto" selected>Adjunto</option>
-            <option value="Factura">Factura</option>
-            <option value="Imagen">Imagen</option>
-            <option value="Documento">Documento</option>
-            <option value="PDF">PDF</option>
-            <option value="Tributo">Tributo</option>
-            <option value="Precio">Precio</option>
-            <option value="Otro">Otro</option>
-          </select>
-        </label>
+        <button type="button" id="btnExportAlmanaque">Exportar</button>
+        <button type="button" id="btnImportAlmanaque">Importar</button>
         <button type="button" class="panel-toggle" id="toggleAlmanaque">Ocultar</button>
+        <input type="file" id="importAlmanaqueFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display:none" />
       </div>
     </div>
     <div class="panel-body" id="almanaquePanel">
@@ -198,6 +219,14 @@
           Día:
           <select id="almanaqueDay"></select>
         </label>
+        <label>
+          Tipo:
+          <select id="almanaqueTypeFilter">
+            <option value="">Todos</option>
+            <option value="Ingreso">Ingresos</option>
+            <option value="Gasto">Gastos</option>
+          </select>
+        </label>
         <button type="button" id="almanaqueViewDay" class="small">Ver</button>
         <input type="file" id="almanaqueAttachmentFile" multiple style="display:none" />
       </div>
@@ -219,11 +248,11 @@
         <thead>
           <tr>
             <th>Tipo</th>
+            <th>Fecha / Hora</th>
             <th>Nombre</th>
             <th>Categoría</th>
-            <th>Cantidad</th>
             <th>Descripción</th>
-            <th>Fecha / Hora</th>
+            <th>Cantidad</th>
             <th>Acción</th>
           </tr>
         </thead>
@@ -286,7 +315,8 @@
       <label>
         Tema:
         <select id="dashboardTheme">
-          <option value="blue" selected>Azul</option>
+          <option value="natural" selected>Natural</option>
+          <option value="blue">Azul</option>
           <option value="green">Verde</option>
           <option value="orange">Naranja</option>
           <option value="purple">Morado</option>
@@ -334,8 +364,20 @@
     </div>
     <button type="button" id="dashboardBackToTop" class="dashboard-back-top" aria-label="Volver arriba">↑</button>
   </section>
+  </main>
 
   <script src="./node_modules/chart.js/dist/chart.umd.js"></script>
+
+  <!-- Librerías para exportación profesional -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+<script src="firebase-init-simple.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

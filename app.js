@@ -47,13 +47,6 @@ const dashboardPanel = document.getElementById("dashboardPanel");
 const dashboardBody = document.getElementById("dashboardBody");
 const toggleDashboard = document.getElementById("toggleDashboard");
 
-const backgroundUrlInput = document.getElementById("backgroundUrl");
-const backgroundUrlApply = document.getElementById("backgroundUrlApply");
-const backgroundFileBtn = document.getElementById("backgroundFileBtn");
-const backgroundFileInput = document.getElementById("backgroundFile");
-const backgroundClear = document.getElementById("backgroundClear");
-const backgroundPreview = document.getElementById("backgroundPreview");
-
 const entriesPanel = document.getElementById("entriesPanel");
 const entriesBody = document.getElementById("entriesBody");
 const toggleEntries = document.getElementById("toggleEntries");
@@ -63,10 +56,14 @@ const btnRestore = document.getElementById("btnRestore");
 const btnClear = document.getElementById("btnClear");
 const importFile = document.getElementById("importFile");
 
+const btnImportAlmanaque = document.getElementById("btnImportAlmanaque");
+const importAlmanaqueFile = document.getElementById("importAlmanaqueFile");
+
 const almanaqueYear = document.getElementById("almanaqueYear");
 const almanaqueMonth = document.getElementById("almanaqueMonth");
 const almanaqueDay = document.getElementById("almanaqueDay");
 const almanaqueViewMode = document.getElementById("almanaqueViewMode");
+const almanaqueTypeFilter = document.getElementById("almanaqueTypeFilter");
 const almanaqueSummary = document.getElementById("almanaqueSummary");
 const almanaqueBody = document.getElementById("almanaqueBody");
 const almanaqueDayDetails = document.getElementById("almanaqueDayDetails");
@@ -86,53 +83,75 @@ const toggleAlmanaque = document.getElementById("toggleAlmanaque");
 const btnExportAlmanaque = document.getElementById("btnExportAlmanaque");
 const btnExportDashboard = document.getElementById("btnExportDashboard");
 
+// Variables del Sidebar
+const sidebarBtnRegistro = document.getElementById("sidebarBtnRegistro");
+const sidebarBtnAlmanaque = document.getElementById("sidebarBtnAlmanaque");
+const sidebarBtnDashboard = document.getElementById("sidebarBtnDashboard");
+const sidebarCurrentTheme = document.getElementById("sidebarCurrentTheme");
+const mainSidebar = document.getElementById("mainSidebar");
+
 let dashboardChart = null;
-let currentTheme = "blue";
+let currentTheme = "natural";
+let currentActivePanel = "entriesPanel"; // Panel actualmente activo
 
 const categories = [
-  "General",
-  "Ropa",
-  "Zapatos",
-  "Comida",
-  "Ocio",
-  "Teléfono",
   "Alquiler",
+  "Bebidas",
+  "Comida",
+  "Comidas Tarjeta",
+  "Compras Internet",
   "Deuda",
-  "Transporte",
-  "Salud",
   "Educación",
-  "Hogar",
-  "Trabajo",
-  "Ingreso pagos",
+  "GASTO FIJO",
+  "Gastos Familiares",
+  "General",
   "Ganancias",
+  "Hogar",
+  "INGRESO FIJO",
   "Intereses",
+  "Ocio",
   "Otros ingresos",
+  "Ropa",
+  "Salud",
+  "Salidas",
+  "Servicio Básicos",
+  "Servicios",
+  "Supermercado",
+  "Teléfono",
+  "Transporte",
+  "Trabajo",
+  "Zapatos",
 ];
 
 const types = ["Gasto", "Ingreso"];
 
 const baseColumns = [
-  { key: "fecha", label: "Fecha / Hora", type: "datetime" },
   { key: "tipo", label: "Tipo", type: "select", fixed: true },
+  { key: "fecha", label: "Fecha / Hora", type: "datetime", fixed: true },
   { key: "nombre", label: "Nombre", type: "text", fixed: true },
   { key: "categoria", label: "Categoría", type: "select" },
-  { key: "cantidad", label: "Cantidad", type: "number", fixed: true },
   { key: "descripcion", label: "Descripción", type: "text" },
+  { key: "cantidad", label: "Precio/Total", type: "number", fixed: true },
 ];
 
 const columns = baseColumns.map(col => ({ ...col }));
-const almanaqueColumnKeys = ["tipo", "nombre", "categoria", "cantidad", "descripcion", "fecha"];
+const almanaqueColumnKeys = ["tipo", "fecha", "nombre", "categoria", "descripcion", "cantidad"];
 
-const STORAGE_KEY = "app_gastos_records";
+const STORAGE_KEY = "app-gastos_records";
 const SETTINGS_KEY = "app_gastos_settings";
 const RECOVERY_KEY = "app_gastos_recovery";
+const DATA_LOAD_ERROR_MESSAGE =
+  "No se pudo leer el almacenamiento guardado. La app no sobrescribira tus datos hasta que revisemos la copia local.";
 
 let gastos = [];
 let focusAfterRender = null;
 let lastDeleted = null;
 
+// Hacer el array gastos accesible globalmente para Firebase
+window.gastos = gastos;
+
 let settings = {
-  theme: "blue",
+  theme: "natural",
   backgroundImage: "",
   customColumns: [],
 };
@@ -141,6 +160,9 @@ let currentAlmanaqueSelectedDate = null;
 let editingRowId = null;
 let visibleRows = [];
 let recoverySnapshot = null;
+let persistenceReady = false;
+let persistenceBlocked = false;
+let pendingAddMode = "single";
 let tableFilters = {
   search: "",
   dateMode: "all",
@@ -236,8 +258,48 @@ async function initializeDesktopShell() {
 }
 
 function saveData() {
+  if (persistenceBlocked || !persistenceReady) {
+    return;
+  }
+
+  if (window.desktopApp?.saveStore) {
+    window.desktopApp
+      .saveStore({
+        records: gastos,
+        settings,
+        recoverySnapshot,
+      })
+      .catch(() => {
+        // ignore persistence errors
+      });
+    return;
+  }
+
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(gastos));
+    // Limpiar adjuntos no deseados antes de guardar
+    const cleanedGastos = gastos.filter(gasto => {
+      // Eliminar registros que sean solo adjuntos no deseados
+      if (gasto.nombre && gasto.nombre.includes("FACTURA_SOLIDWORKS.pdf")) {
+        console.log("🗑️ Eliminando adjunto no deseado:", gasto.nombre);
+        return false;
+      }
+      
+      // Eliminar otros adjuntos problemáticos
+      if (gasto.descripcion && gasto.descripcion.includes("Registro contable de Importado | Adjuntos:")) {
+        console.log("🗑️ Eliminando registro de adjunto automático:", gasto.descripcion);
+        return false;
+      }
+      
+      return true;
+    });
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedGastos));
+    
+    // Actualizar el array global también
+    gastos.length = 0;
+    gastos.push(...cleanedGastos);
+    window.gastos = gastos;
+    
   } catch {
     // ignore storage errors
   }
@@ -323,25 +385,79 @@ function mergeCustomColumnsFromRecords(records) {
 }
 
 function loadData() {
+  let loaded = false;
+
   try {
+    console.log("📂 Cargando datos desde localStorage...");
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      mergeCustomColumnsFromRecords(parsed);
-      gastos = parsed.map(normalizeRecord);
+    if (!raw) {
+      console.log("❌ No hay datos en localStorage");
+      return loaded;
     }
-  } catch {
-    // ignore parse errors
+    
+    const parsed = JSON.parse(raw);
+    console.log(`📊 Se encontraron ${parsed.length} registros en localStorage`);
+    
+    if (Array.isArray(parsed)) {
+      const cleaned = cleanupLycamobileDuplicates(parsed);
+      mergeCustomColumnsFromRecords(cleaned);
+      gastos = cleaned.map(normalizeRecord);
+      
+      // Hacer global para Firebase
+      window.gastos = gastos;
+      
+      loaded = true;
+      console.log(`✅ ${gastos.length} registros cargados correctamente`);
+    }
+  } catch (error) {
+    console.error("❌ Error cargando datos:", error);
   }
+
+  return loaded;
 }
 
 function saveSettings() {
+  if (persistenceBlocked || !persistenceReady) {
+    return;
+  }
+
+  if (window.desktopApp?.saveStore) {
+    saveData();
+    return;
+  }
+
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   } catch {
     // ignore storage errors
   }
+}
+
+function normalizeComparableText(value) {
+  return normalizeText(value).replace(/[^a-z0-9]/g, "");
+}
+
+function cleanupLycamobileDuplicates(records = []) {
+  const targetNames = new Set(["lycamobilech", "lycamobylech"]);
+  const preferredDate = "2026-03-24";
+  let preferredKept = false;
+
+  return records.reduce((acc, record) => {
+    const nameKey = normalizeComparableText(record?.nombre);
+    const dateKey = String(record?.fecha || "").slice(0, 10);
+    if (!targetNames.has(nameKey)) {
+      acc.push(record);
+      return acc;
+    }
+    if (dateKey === preferredDate && !preferredKept) {
+      preferredKept = true;
+      acc.push({
+        ...record,
+        attachments: [],
+      });
+    }
+    return acc;
+  }, []);
 }
 
 function saveRecoverySnapshot(reason = "manual") {
@@ -354,6 +470,15 @@ function saveRecoverySnapshot(reason = "manual") {
     })),
     customColumns: settings.customColumns || [],
   };
+
+  if (persistenceBlocked || !persistenceReady) {
+    return;
+  }
+
+  if (window.desktopApp?.saveStore) {
+    saveData();
+    return;
+  }
 
   try {
     localStorage.setItem(RECOVERY_KEY, JSON.stringify(recoverySnapshot));
@@ -385,17 +510,75 @@ function setRestoreButtonState() {
 }
 
 function loadSettings() {
+  let loaded = false;
+
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return;
+    if (!raw) return loaded;
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === "object") {
       settings = { ...settings, ...parsed };
+      if (!parsed.theme || parsed.theme === "blue") {
+        settings.theme = "natural";
+      }
       restoreColumns(settings.customColumns);
+      loaded = true;
     }
   } catch {
     // ignore parse errors
   }
+
+  return loaded;
+}
+
+function applyPersistedState(payload = {}) {
+  if (payload.settings && typeof payload.settings === "object") {
+    settings = { ...settings, ...payload.settings };
+    if (!payload.settings.theme || payload.settings.theme === "blue") {
+      settings.theme = "natural";
+    }
+    restoreColumns(settings.customColumns);
+  }
+
+  if (Array.isArray(payload.records)) {
+    const cleaned = cleanupLycamobileDuplicates(payload.records);
+    mergeCustomColumnsFromRecords(cleaned);
+    gastos = cleaned.map(normalizeRecord);
+  }
+
+  if (payload.recoverySnapshot && Array.isArray(payload.recoverySnapshot.records)) {
+    recoverySnapshot = payload.recoverySnapshot;
+  }
+}
+
+async function initializePersistence() {
+  if (window.desktopApp?.loadStore) {
+    const stored = await window.desktopApp.loadStore();
+
+    if (stored?.ok) {
+      applyPersistedState(stored.data || {});
+      persistenceReady = true;
+
+      const migratedFromLocalStorage =
+        stored.source !== "file" &&
+        (loadSettings() || loadData() || (loadRecoverySnapshot(), !!recoverySnapshot));
+
+      if (migratedFromLocalStorage) {
+        saveData();
+      }
+
+      return;
+    }
+
+    persistenceBlocked = true;
+    console.error(DATA_LOAD_ERROR_MESSAGE, stored?.message || "");
+    return;
+  }
+
+  loadSettings();
+  loadData();
+  loadRecoverySnapshot();
+  persistenceReady = true;
 }
 
 function getNowDateTimeLocal() {
@@ -410,6 +593,10 @@ function getNowDateTimeLocal() {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+function createUniqueId() {
+  return Date.now() + Math.floor(Math.random() * 1000000);
+}
+
 function splitDateTimeLocal(dateTime) {
   if (!dateTime || typeof dateTime !== "string") return { date: "", time: "" };
   const [date = "", time = ""] = dateTime.split("T");
@@ -417,6 +604,23 @@ function splitDateTimeLocal(dateTime) {
 }
 
 const themePalette = {
+  natural: {
+    background: "#f6f3ec",
+    primary: "#6f7b5f",
+    primaryDark: "#556148",
+    cardBg: "#fbf8f2",
+    cardBorder: "#d8d0c1",
+    panelBg: "#f8f4ec",
+    panelBorder: "#d8d0c1",
+    tableBg: "#fffdf8",
+    tableHeader: "#f3ede2",
+    tableBorder: "#d8d0c1",
+    tableRowAlt: "rgba(111, 123, 95, 0.06)",
+    text: "#2c3326",
+    muted: "#6f7567",
+    chartBg: "rgba(111, 123, 95, 0.75)",
+    chartBorder: "rgba(111, 123, 95, 1)",
+  },
   blue: {
     background: "#ffffff",
     primary: "#1e7fe2",
@@ -460,22 +664,6 @@ const themePalette = {
     muted: "#555",
     chartBg: "rgba(106, 27, 154, 0.7)",
     chartBorder: "rgba(106, 27, 154, 1)",
-  },
-  dark: {
-    background: "#04070a",
-    primary: "#2f4454",
-    primaryDark: "#19222a",
-    cardBg: "#0f1317",
-    panelBg: "#0c0f13",
-    panelBorder: "#1c2229",
-    tableBg: "#0b0f13",
-    tableHeader: "#11171f",
-    tableBorder: "#18212b",
-    tableRowAlt: "rgba(255, 255, 255, 0.04)",
-    text: "#eef2f5",
-    muted: "#a6b2c0",
-    chartBg: "rgba(255, 193, 7, 0.65)",
-    chartBorder: "rgba(255, 193, 7, 1)",
   },
   red: {
     background: "#fff4f3",
@@ -550,15 +738,90 @@ const themePalette = {
     chartBorder: "rgba(194, 24, 91, 1)",
   },
   ocean: {
-    background: "#eef8ff",
-    primary: "#1565c0",
-    primaryDark: "#0d47a1",
-    cardBg: "#e3f2fd",
-    cardBorder: "#b8d6f0",
+    background: "#f0f8ff",
+    primary: "#003366",
+    primaryDark: "#002244",
+    cardBg: "#ffffff",
+    cardBorder: "#d0e0f0",
     text: "#0b2740",
     muted: "#45627f",
     chartBg: "rgba(21, 101, 192, 0.7)",
     chartBorder: "rgba(21, 101, 192, 1)",
+  },
+  mint: {
+    background: "#f5faf5",
+    primary: "#2e7d32",
+    primaryDark: "#256e2c",
+    cardBg: "#ffffff",
+    cardBorder: "#c8e6c9",
+    text: "#1b5e20",
+    muted: "#4caf50",
+    chartBg: "rgba(46, 125, 50, 0.7)",
+    chartBorder: "rgba(46, 125, 50, 1)",
+  },
+  turquoise: {
+    background: "#f0fdfc",
+    primary: "#00695c",
+    primaryDark: "#004d40",
+    cardBg: "#ffffff",
+    cardBorder: "#b2dfdb",
+    text: "#004d40",
+    muted: "#26a69a",
+    chartBg: "rgba(0, 105, 92, 0.7)",
+    chartBorder: "rgba(0, 105, 92, 1)",
+  },
+  sky: {
+    background: "#f8faff",
+    primary: "#1565c0",
+    primaryDark: "#0d47a1",
+    cardBg: "#ffffff",
+    cardBorder: "#bbdefb",
+    text: "#0d47a1",
+    muted: "#42a5f5",
+    chartBg: "rgba(21, 101, 192, 0.7)",
+    chartBorder: "rgba(21, 101, 192, 1)",
+  },
+  cornflower: {
+    background: "#f8f9ff",
+    primary: "#283593",
+    primaryDark: "#1a237e",
+    cardBg: "#ffffff",
+    cardBorder: "#c5cae9",
+    text: "#1a237e",
+    muted: "#5c6bc0",
+    chartBg: "rgba(40, 53, 147, 0.7)",
+    chartBorder: "rgba(40, 53, 147, 1)",
+  },
+  steel: {
+    background: "#fafbfc",
+    primary: "#37474f",
+    primaryDark: "#263238",
+    cardBg: "#ffffff",
+    cardBorder: "#cfd8dc",
+    text: "#263238",
+    muted: "#607d8b",
+    chartBg: "rgba(55, 71, 79, 0.7)",
+    chartBorder: "rgba(55, 71, 79, 1)",
+  },
+  midnight: {
+    background: "#081a41",
+    primary: "#0f2744",
+    primaryDark: "#061229",
+    cardBg: "#0f2958",
+    cardBorder: "#1a3a6c",
+    text: "#ffffff",
+    muted: "#b8c5d6",
+    tableBg: "#0f2958",
+    tableHeader: "#1a3a6c",
+    tableBorder: "#244080",
+    tableRowAlt: "rgba(255, 255, 255, 0.05)",
+    chartBg: "rgba(8, 26, 65, 0.8)",
+    chartBorder: "rgba(8, 26, 65, 1)",
+    headerText: "rgba(8, 26, 65, 1)",
+    tableHeaderText: "#ffffff",
+    buttonText: "#ffffff",
+    menuText: "#ffffff",
+    sidebarText: "#ffffff",
   },
 };
 
@@ -566,38 +829,8 @@ function getCssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "";
 }
 
-function syncBackgroundControls() {
-  if (backgroundUrlInput) {
-    backgroundUrlInput.value =
-      settings.backgroundImage && (settings.backgroundImage.startsWith("http") || settings.backgroundImage.startsWith("data:"))
-        ? settings.backgroundImage
-        : "";
-  }
-}
-
-function applyBackground() {
-  if (settings.backgroundImage) {
-    const safeUrl = String(settings.backgroundImage).replace(/"/g, "%22");
-    document.body.style.backgroundColor = getCssVar("--background") || "#ffffff";
-    document.body.style.backgroundImage = `url("${safeUrl}")`;
-    document.body.style.backgroundSize = "cover";
-    document.body.style.backgroundRepeat = "no-repeat";
-    document.body.style.backgroundPosition = "center center";
-    document.body.style.backgroundAttachment = "fixed";
-  } else {
-    document.body.style.backgroundImage = "";
-    document.body.style.backgroundSize = "";
-    document.body.style.backgroundRepeat = "";
-    document.body.style.backgroundPosition = "";
-    document.body.style.backgroundAttachment = "";
-    document.body.style.backgroundColor = getCssVar("--background") || "";
-  }
-
-  syncBackgroundControls();
-}
-
 function applyTheme(theme) {
-  currentTheme = theme in themePalette ? theme : "blue";
+  currentTheme = theme in themePalette ? theme : "natural";
   const palette = themePalette[currentTheme];
 
   document.documentElement.style.setProperty("--background", palette.background);
@@ -612,15 +845,34 @@ function applyTheme(theme) {
   document.documentElement.style.setProperty("--table-border", palette.tableBorder || palette.cardBorder);
   document.documentElement.style.setProperty("--text", palette.text || "#000");
   document.documentElement.style.setProperty("--muted", palette.muted || "#555");
+  
+  // Aplicar variables del sidebar sincronizadas con el tema
+  const sidebarBg = palette.primary || "#003366";
+  const sidebarHover = palette.primaryDark || "rgba(0, 51, 102, 0.8)";
+  const sidebarActive = palette.primaryDark || "rgba(0, 51, 102, 0.9)";
+  const sidebarBorder = palette.primaryDark || "rgba(0, 51, 102, 0.3)";
+  
+  document.documentElement.style.setProperty("--sidebar-bg", sidebarBg);
+  document.documentElement.style.setProperty("--sidebar-hover", sidebarHover);
+  document.documentElement.style.setProperty("--sidebar-active", sidebarActive);
+  document.documentElement.style.setProperty("--sidebar-border", sidebarBorder);
+  
+  // Aplicar border colors al header sincronizados con el tema
+  const headerBorder = palette.primaryDark || "rgba(0, 51, 102, 0.5)";
+  const headerShadow = palette.primaryDark || "rgba(0, 51, 102, 0.2)";
+  
+  document.documentElement.style.setProperty("--header-border", headerBorder);
+  document.documentElement.style.setProperty("--header-shadow", headerShadow);
 
   if (dashboardTheme && dashboardTheme.value !== currentTheme) {
     dashboardTheme.value = currentTheme;
   }
+  
+  // Actualizar tema en el sidebar
+  updateSidebarTheme();
   if (headerThemeSelect && headerThemeSelect.value !== currentTheme) {
     headerThemeSelect.value = currentTheme;
   }
-
-  applyBackground();
 
   if (dashboardChart) {
     dashboardChart.data.datasets[0].backgroundColor = palette.chartBg;
@@ -642,6 +894,10 @@ function applyTheme(theme) {
     }
     dashboardChart.update();
   }
+
+  if (dashboardDate && dashboardPeriod) {
+    updateDashboard();
+  }
 }
 
 function togglePanel(panelBody, toggleButton) {
@@ -652,18 +908,90 @@ function togglePanel(panelBody, toggleButton) {
 }
 
 function exportData() {
-  const payload = {
-    exportedAt: new Date().toISOString(),
-    records: gastos,
-    customColumns: settings.customColumns || [],
+  // Mostrar menú de opciones de exportación
+  showExportMenu();
+}
+
+function showExportMenu() {
+  // Crear modal de opciones de exportación
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 10000;
+    min-width: 450px;
+  `;
+  
+  modal.innerHTML = `
+    <h3 style="margin: 0 0 20px 0; color: #333;">Exportar Registros Contables</h3>
+    <p style="margin: 0 0 20px 0; color: #666;">Selecciona el formato de exportación:</p>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+      <button onclick="exportAsJSON()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📄 JSON (Original)
+      </button>
+      <button onclick="exportAsExcel()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #e8f5e8; color: #333; font-weight: 600;">
+        📊 Excel (.xlsx)
+      </button>
+      <button onclick="exportAsCSV()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📋 CSV (Excel)
+      </button>
+      <button onclick="exportAsPDF()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📋 PDF (Documento)
+      </button>
+      <button onclick="exportAsTXT()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📝 TXT (Texto)
+      </button>
+      <button onclick="exportAsWord()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📝 Word (Documento)
+      </button>
+      <button onclick="exportAsImage()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        🖼️ Imagen (PNG/JPG)
+      </button>
+      <button onclick="exportAsJSON()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        🔄 Backup Completo
+      </button>
+    </div>
+    
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button onclick="closeExportModal()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f8f9fa; color: #333;">
+        Cancelar
+      </button>
+    </div>
+  `;
+  
+  // Añadir backdrop
+  const backdrop = document.createElement('div');
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+  `;
+  
+  // Función para cerrar modal correctamente
+  window.closeExportModal = function() {
+    const modal = document.querySelector('[style*="z-index: 10000"]');
+    const backdrop = document.querySelector('[style*="z-index: 9999"]');
+    if (modal) modal.remove();
+    if (backdrop) backdrop.remove();
+    // Limpiar la función global
+    delete window.closeExportModal;
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `gastos-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  
+  backdrop.onclick = () => closeExportModal();
+  
+  document.body.appendChild(backdrop);
+  document.body.appendChild(modal);
 }
 
 function mapImportedKey(key = "") {
@@ -687,6 +1015,761 @@ function mapImportedKey(key = "") {
   };
   return aliases[normalized] || key;
 }
+
+// FUNCIONES DE EXPORTACIÓN POR FORMATO
+window.exportAsJSON = function() {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    records: gastos,
+    customColumns: settings.customColumns || [],
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `gastos-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  // Cerrar modal
+  if (window.closeExportModal) closeExportModal();
+};
+
+window.exportAsCSV = function() {
+  if (gastos.length === 0) {
+    alert("No hay registros para exportar");
+    if (window.closeExportModal) closeExportModal();
+    return;
+  }
+  
+  // Obtener el orden exacto de las columnas como se ven en pantalla
+  const visibleColumns = columns.filter(col => !col.hidden);
+  const headers = visibleColumns.map(col => 
+    col.label.charAt(0).toUpperCase() + col.label.slice(1)
+  );
+  
+  // Crear contenido CSV manteniendo el orden visual
+  const csvContent = [
+    headers.join(";"), // Usar punto y coma para compatibilidad con Excel
+    ...gastos.map(gasto => 
+      visibleColumns.map(col => {
+        let value = gasto[col.key] || "";
+        // Escapar comillas y envolver en comillas si contiene caracteres especiales
+        if (typeof value === 'string' && (value.includes(";") || value.includes('"') || value.includes('\n'))) {
+          value = `"${value.replace(/"/g, '""')}"`;
+        } else if (typeof value === 'string') {
+          value = value.replace(/"/g, '""');
+        }
+        return value;
+      }).join(";")
+    )
+  ].join("\n");
+  
+  // Agregar BOM para proper UTF-8 en Excel
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `gastos-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  console.log(`📊 CSV exportado: ${gastos.length} registros con ${headers.length} columnas`);
+  console.log(`📋 Columnas exportadas: ${headers.join(", ")}`);
+  
+  // Cerrar modal
+  if (window.closeExportModal) closeExportModal();
+};
+
+// Nueva función para exportar a Excel profesional
+window.exportAsExcel = function() {
+  if (gastos.length === 0) {
+    alert("No hay registros para exportar");
+    if (window.closeExportModal) closeExportModal();
+    return;
+  }
+  
+  if (typeof XLSX === 'undefined') {
+    alert("Librería Excel no cargada. Por favor, recarga la página.");
+    if (window.closeExportModal) closeExportModal();
+    return;
+  }
+  
+  try {
+    // Obtener columnas visibles en orden
+    const visibleColumns = columns.filter(col => !col.hidden);
+    const headers = visibleColumns.map(col => col.label);
+    
+    // Preparar datos para Excel
+    const excelData = [
+      headers, // Encabezados
+      ...gastos.map(gasto => 
+        visibleColumns.map(col => {
+          let value = gasto[col.key] || "";
+          // Formatear fechas para Excel
+          if (col.type === 'datetime' && value) {
+            const date = new Date(value);
+            if (!isNaN(date.getTime())) {
+              return date;
+            }
+          }
+          // Convertir números
+          if (col.type === 'number' && value) {
+            return parseFloat(value) || 0;
+          }
+          return value;
+        })
+      )
+    ];
+    
+    // Crear workbook
+    const ws = XLSX.utils.aoa_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Registros Contables");
+    
+    // Ajustar ancho de columnas
+    const colWidths = headers.map((header, i) => ({
+      wch: Math.max(header.length, 15, ...gastos.map(g => String(g[visibleColumns[i].key] || "").length))
+    }));
+    ws['!cols'] = colWidths;
+    
+    // Generar y descargar archivo
+    XLSX.writeFile(wb, `gastos-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    
+    console.log(`📊 Excel exportado: ${gastos.length} registros con ${headers.length} columnas`);
+    
+  } catch (error) {
+    console.error("❌ Error exportando a Excel:", error);
+    alert("Error al exportar a Excel: " + error.message);
+  }
+  
+  // Cerrar modal
+  if (window.closeExportModal) closeExportModal();
+};
+
+window.exportAsTXT = function() {
+  if (gastos.length === 0) {
+    alert("No hay registros para exportar");
+    if (window.closeExportModal) closeExportModal();
+    return;
+  }
+  
+  let txtContent = `REGISTROS CONTABLES\n`;
+  txtContent += `Exportado: ${new Date().toLocaleString()}\n`;
+  txtContent += `Total de registros: ${gastos.length}\n`;
+  txtContent += `${"=".repeat(80)}\n\n`;
+  
+  gastos.forEach((gasto, index) => {
+    txtContent += `REGISTRO #${index + 1}\n`;
+    txtContent += `Fecha: ${gasto.fecha || "N/A"}\n`;
+    txtContent += `Tipo: ${gasto.tipo || "N/A"}\n`;
+    txtContent += `Nombre: ${gasto.nombre || "N/A"}\n`;
+    txtContent += `Categoría: ${gasto.categoria || "N/A"}\n`;
+    txtContent += `Cantidad: ${gasto.cantidad || 0}€\n`;
+    txtContent += `Descripción: ${gasto.descripcion || "N/A"}\n`;
+    txtContent += `${"-".repeat(40)}\n\n`;
+  });
+  
+  const blob = new Blob([txtContent], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `gastos-${new Date().toISOString().slice(0, 10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  // Cerrar modal
+  if (window.closeExportModal) closeExportModal();
+};
+
+window.exportAsPDF = function() {
+  if (gastos.length === 0) {
+    alert("No hay registros para exportar");
+    if (window.closeExportModal) closeExportModal();
+    return;
+  }
+  
+  if (typeof window.jspdf === 'undefined') {
+    alert("Librería PDF no cargada. Por favor, recarga la página.");
+    if (window.closeExportModal) closeExportModal();
+    return;
+  }
+  
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Obtener datos filtrados y ordenados exactamente como se ven en pantalla
+    const filtered = gastos.filter(gasto => {
+      const matchesSearch = !tableFilters.search || 
+        Object.values(gasto).some(val => 
+          String(val).toLowerCase().includes(tableFilters.search.toLowerCase())
+        );
+      
+      const matchesDate = (!tableFilters.year || String(gasto.fecha).includes(tableFilters.year)) &&
+                         (!tableFilters.month || String(gasto.fecha).includes(tableFilters.month)) &&
+                         (!tableFilters.day || String(gasto.fecha).includes(tableFilters.day));
+      
+      const matchesType = !tableFilters.tipo || gasto.tipo === tableFilters.tipo;
+      const matchesCategory = !tableFilters.categoria || gasto.categoria === tableFilters.categoria;
+      
+      return matchesSearch && matchesDate && matchesType && matchesCategory;
+    });
+
+    // Aplicar el mismo orden que la vista actual
+    const sorted = [...filtered].sort((a, b) => {
+      if (tableSort.amount !== "default") {
+        const diff = (Number(a.cantidad) || 0) - (Number(b.cantidad) || 0);
+        if (diff !== 0) {
+          return tableSort.amount === "asc" ? diff : -diff;
+        }
+      }
+
+      if (tableSort.date !== "default") {
+        const aDate = new Date(a.fecha).getTime() || 0;
+        const bDate = new Date(b.fecha).getTime() || 0;
+        if (tableSort.date === "oldest" && aDate !== bDate) return aDate - bDate;
+        if (tableSort.date === "newest" && aDate !== bDate) return bDate - aDate;
+        if (tableSort.date === "current") {
+          const now = Date.now();
+          const aDiff = Math.abs(aDate - now);
+          const bDiff = Math.abs(bDate - now);
+          if (aDiff !== bDiff) return aDiff - bDiff;
+        }
+        if (tableSort.date === "asc" && aDate !== bDate) return aDate - bDate;
+        if (tableSort.date === "desc" && aDate !== bDate) return bDate - aDate;
+      }
+
+      return String(a.fecha).localeCompare(String(b.fecha));
+    });
+    
+    // Configuración inicial
+    doc.setFontSize(20);
+    doc.text("Registros Contables", 105, 20, { align: "center" });
+    
+    doc.setFontSize(12);
+    doc.text(`Exportado: ${new Date().toLocaleString("es-ES")}`, 105, 30, { align: "center" });
+    doc.text(`Total de registros: ${sorted.length} (filtrados de ${gastos.length})`, 105, 37, { align: "center" });
+    
+    // Preparar datos para la tabla con el orden exacto de la vista
+    const visibleColumns = columns.filter(col => !col.hidden);
+    const headers = visibleColumns.map(col => col.label);
+    
+    const tableData = sorted.map(gasto => 
+      visibleColumns.map(col => {
+        let value = gasto[col.key] || "";
+        // Formatear valores para mostrar
+        if (col.type === 'number' && value) {
+          return `${parseFloat(value).toFixed(2)}€`;
+        }
+        if (col.type === 'datetime' && value) {
+          const date = new Date(value);
+          if (!isNaN(date.getTime())) {
+            return date.toLocaleDateString("es-ES");
+          }
+        }
+        return String(value);
+      })
+    );
+    
+    // Añadir tabla usando autoTable
+    doc.autoTable({
+      head: [headers],
+      body: tableData,
+      startY: 45,
+      theme: 'grid',
+      styles: {
+        fontSize: 10,
+        cellPadding: 3,
+        font: 'helvetica'
+      },
+      headStyles: {
+        fillColor: [111, 123, 95],
+        textColor: 255,
+        fontStyle: 'bold'
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245]
+      },
+      columnStyles: {
+        0: { cellWidth: 25 }, // Fecha
+        1: { cellWidth: 20 }, // Tipo
+        2: { cellWidth: 40 }, // Nombre
+        3: { cellWidth: 30 }, // Categoría
+        4: { cellWidth: 25 }, // Cantidad
+        5: { cellWidth: 'auto' } // Descripción
+      }
+    });
+    
+    // Guardar PDF
+    doc.save(`gastos-${new Date().toISOString().slice(0, 10)}.pdf`);
+    
+    console.log(`📋 PDF exportado: ${sorted.length} registros con ${headers.length} columnas (ordenado como vista actual)`);
+    
+  } catch (error) {
+    console.error("❌ Error exportando a PDF:", error);
+    alert("Error al exportar a PDF: " + error.message);
+  }
+  
+  // Cerrar modal
+  if (window.closeExportModal) closeExportModal();
+};
+
+window.exportAsWord = function() {
+  if (gastos.length === 0) {
+    alert("No hay registros para exportar");
+    if (window.closeExportModal) closeExportModal();
+    return;
+  }
+  
+  let wordContent = `<html><head><meta charset="utf-8"><title>Registros Contables</title></head><body>`;
+  wordContent += `<h1>REGISTROS CONTABLES</h1>`;
+  wordContent += `<p>Exportado: ${new Date().toLocaleString()}</p>`;
+  wordContent += `<p>Total de registros: ${gastos.length}</p>`;
+  wordContent += `<table border="1" style="border-collapse: collapse; width: 100%;">`;
+  wordContent += `<tr><th>Fecha</th><th>Tipo</th><th>Nombre</th><th>Categoría</th><th>Cantidad</th><th>Descripción</th></tr>`;
+  
+  gastos.forEach(gasto => {
+    wordContent += `<tr>`;
+    wordContent += `<td>${gasto.fecha || ""}</td>`;
+    wordContent += `<td>${gasto.tipo || ""}</td>`;
+    wordContent += `<td>${gasto.nombre || ""}</td>`;
+    wordContent += `<td>${gasto.categoria || ""}</td>`;
+    wordContent += `<td>${gasto.cantidad || 0}€</td>`;
+    wordContent += `<td>${gasto.descripcion || ""}</td>`;
+    wordContent += `</tr>`;
+  });
+  
+  wordContent += `</table></body></html>`;
+  
+  const blob = new Blob([wordContent], { type: "application/vnd.ms-word" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `gastos-${new Date().toISOString().slice(0, 10)}.doc`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  // Cerrar modal
+  if (window.closeExportModal) closeExportModal();
+};
+
+window.exportAsImage = function() {
+  alert("Exportación como Imagen - Esta función capturará la tabla como imagen. Asegúrate de que todos los registros sean visibles.");
+  
+  // Usar html2canvas si está disponible, o sugerir alternativa
+  if (typeof html2canvas !== 'undefined') {
+    const tabla = document.getElementById('tabla-body');
+    if (tabla) {
+      html2canvas(tabla).then(canvas => {
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `gastos-${new Date().toISOString().slice(0, 10)}.png`;
+        a.click();
+      });
+    }
+  } else {
+    alert("Para exportar como imagen, necesita hacer una captura de pantalla manualmente o instalar la librería html2canvas.");
+  }
+  
+  // Cerrar modal
+  if (window.closeExportModal) closeExportModal();
+};
+
+// FUNCIÓN DE MENÚ DE IMPORTACIÓN
+window.showImportMenu = function() {
+  // Crear modal de opciones de importación
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 10000;
+    min-width: 400px;
+  `;
+  
+  modal.innerHTML = `
+    <h3 style="margin: 0 0 20px 0; color: #333;">Importar Registros Contables</h3>
+    <p style="margin: 0 0 20px 0; color: #666;">Selecciona el formato de importación:</p>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+      <button onclick="importFromJSON()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📄 JSON (Original)
+      </button>
+      <button onclick="importFromCSV()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📊 CSV (Excel)
+      </button>
+      <button onclick="importFromTXT()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📝 TXT (Texto)
+      </button>
+      <button onclick="attachFileManually()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #e3f2fd; color: #333;">
+        📎 Adjuntar Archivo
+      </button>
+      <button onclick="limpiarAdjuntosProblematicos()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #ffebee; color: #333;">
+        🧹 Limpiar Adjuntos
+      </button>
+      <button onclick="showFormatHelp()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        ❓ Ayuda Formatos
+      </button>
+    </div>
+    
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button onclick="closeImportModal()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f8f9fa; color: #333;">
+        Cancelar
+      </button>
+    </div>
+  `;
+  
+  // Añadir backdrop
+  const backdrop = document.createElement('div');
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+  `;
+  
+  // Función para cerrar modal correctamente
+  window.closeImportModal = function() {
+    const modal = document.querySelector('[style*="z-index: 10000"]');
+    const backdrop = document.querySelector('[style*="z-index: 9999"]');
+    if (modal) modal.remove();
+    if (backdrop) backdrop.remove();
+    delete window.closeImportModal;
+  };
+  
+  backdrop.onclick = () => closeImportModal();
+  
+  document.body.appendChild(backdrop);
+  document.body.appendChild(modal);
+};
+
+// FUNCIONES DE IMPORTACIÓN POR FORMATO
+window.importFromJSON = function() {
+  document.getElementById('importFile').click();
+  if (window.closeImportModal) closeImportModal();
+};
+
+window.importFromCSV = function() {
+  // Filtrar para aceptar solo CSV y Excel
+  const importFile = document.getElementById('importFile');
+  importFile.accept = '.csv,.xlsx,.xls';
+  importFile.click();
+  if (window.closeImportModal) closeImportModal();
+};
+
+window.importFromTXT = function() {
+  document.getElementById('importFile').click();
+  if (window.closeImportModal) closeImportModal();
+};
+
+window.importFromImage = function() {
+  document.getElementById('importFile').click();
+  if (window.closeImportModal) closeImportModal();
+};
+
+window.importFromWord = function() {
+  document.getElementById('importFile').click();
+  if (window.closeImportModal) closeImportModal();
+};
+
+window.importFromPDF = function() {
+  document.getElementById('importFile').click();
+  if (window.closeImportModal) closeImportModal();
+};
+
+// FUNCIONES ESPECIALES PARA ALMANAQUE
+window.showAlmanaqueExportMenu = function() {
+  // Crear modal de opciones de exportación para Almanaque (idéntico al Registro Contable)
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 10000;
+    min-width: 450px;
+  `;
+  
+  modal.innerHTML = `
+    <h3 style="margin: 0 0 20px 0; color: #333;">Exportar Registros Contables</h3>
+    <p style="margin: 0 0 20px 0; color: #666;">Selecciona el formato de exportación:</p>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+      <button onclick="exportAsJSON()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📄 JSON (Original)
+      </button>
+      <button onclick="exportAsExcel()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #e8f5e8; color: #333; font-weight: 600;">
+        📊 Excel (.xlsx)
+      </button>
+      <button onclick="exportAsCSV()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📋 CSV (Excel)
+      </button>
+      <button onclick="exportAsPDF()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📋 PDF (Documento)
+      </button>
+      <button onclick="exportAsTXT()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📝 TXT (Texto)
+      </button>
+      <button onclick="exportAsWord()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📝 Word (Documento)
+      </button>
+      <button onclick="exportAsImage()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        🖼️ Imagen (PNG/JPG)
+      </button>
+      <button onclick="exportAsJSON()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        🔄 Backup Completo
+      </button>
+    </div>
+    
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button onclick="closeAlmanaqueExportModal()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f8f9fa; color: #333;">
+        Cancelar
+      </button>
+    </div>
+  `;
+  
+  // Añadir backdrop
+  const backdrop = document.createElement('div');
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+  `;
+  
+  // Función para cerrar modal correctamente
+  window.closeAlmanaqueExportModal = function() {
+    const modal = document.querySelector('[style*="z-index: 10000"]');
+    const backdrop = document.querySelector('[style*="z-index: 9999"]');
+    if (modal) modal.remove();
+    if (backdrop) backdrop.remove();
+    // Limpiar la función global
+    delete window.closeAlmanaqueExportModal;
+  };
+  
+  backdrop.onclick = () => closeAlmanaqueExportModal();
+  
+  document.body.appendChild(backdrop);
+  document.body.appendChild(modal);
+};
+
+// FUNCIONES DE EXPORTACIÓN PARA ALMANAQUE (ahora usan las mismas funciones que el Registro Contable)
+window.exportAlmanaqueAsJSON = function() {
+  // Usar la función principal exportAsJSON
+  exportAsJSON();
+};
+
+window.exportAlmanaqueAsCSV = function() {
+  // Usar la función principal exportAsCSV
+  exportAsCSV();
+};
+
+window.exportAlmanaqueAsTXT = function() {
+  // Usar la función principal exportAsTXT
+  exportAsTXT();
+};
+
+window.exportAlmanaqueAsPDF = function() {
+  // Usar la función principal exportAsPDF
+  exportAsPDF();
+};
+
+window.exportAlmanaqueAsWord = function() {
+  // Usar la función principal exportAsWord
+  exportAsWord();
+};
+
+window.exportAlmanaqueAsImage = function() {
+  // Usar la función principal exportAsImage
+  exportAsImage();
+};
+
+function splitDelimitedLine(line = "", delimiter = ",") {
+  const values = [];
+  let current = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+    } else if (char === delimiter && !insideQuotes) {
+      values.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  values.push(current.trim());
+  return values;
+}
+
+function parseDelimitedRecords(text, fallbackDate = getNowDateTimeLocal()) {
+  const lines = String(text || "")
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  console.log(`📄 Procesando ${lines.length} líneas del CSV`);
+
+  if (lines.length < 2) {
+    console.log("❌ CSV vacío o sin datos suficientes");
+    return [];
+  }
+
+  const delimiter = lines[0].includes(";") ? ";" : lines[0].includes("\t") ? "\t" : ",";
+  console.log(`🔍 Delimitador detectado: "${delimiter}"`);
+  
+  const headers = splitDelimitedLine(lines[0], delimiter).map(mapImportedKey);
+  console.log(`📋 Columnas encontradas: ${headers.join(", ")}`);
+
+  const records = lines.slice(1).map((line, index) => {
+    const values = splitDelimitedLine(line, delimiter);
+    const record = {};
+    headers.forEach((header, colIndex) => {
+      record[header] = values[colIndex] ?? "";
+    });
+    if (!record.fecha) record.fecha = fallbackDate;
+    
+    // Logging para primeros registros
+    if (index < 3) {
+      console.log(`📝 Fila ${index + 1}: ${record.nombre || 'Sin nombre'} - ${record.cantidad || 0}€`);
+    }
+    
+    return record;
+  });
+
+  console.log(`✅ Parseados ${records.length} registros del CSV`);
+  return records;
+}
+
+// FUNCIÓN DE MENÚ DE IMPORTACIÓN PARA ALMANAQUE
+window.showAlmanaqueImportMenu = function() {
+  // Crear modal de opciones de importación para Almanaque
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 10000;
+    min-width: 400px;
+  `;
+  
+  modal.innerHTML = `
+    <h3 style="margin: 0 0 20px 0; color: #333;">Importar Registros Contables</h3>
+    <p style="margin: 0 0 20px 0; color: #666;">Selecciona el formato de importación:</p>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+      <button onclick="importAlmanaqueFromJSON()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📄 JSON (Original)
+      </button>
+      <button onclick="importAlmanaqueFromCSV()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📊 CSV (Excel)
+      </button>
+      <button onclick="importAlmanaqueFromTXT()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📝 TXT (Texto)
+      </button>
+      <button onclick="importAlmanaqueFromImage()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        🖼️ Imagen (OCR)
+      </button>
+      <button onclick="importAlmanaqueFromWord()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📝 Word (Documento)
+      </button>
+      <button onclick="importAlmanaqueFromPDF()" style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #f8f9fa; color: #333;">
+        📋 PDF (Documento)
+      </button>
+    </div>
+    
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button onclick="closeAlmanaqueImportModal()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f8f9fa; color: #333;">
+        Cancelar
+      </button>
+    </div>
+  `;
+  
+  // Añadir backdrop
+  const backdrop = document.createElement('div');
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+  `;
+  
+  // Función para cerrar modal correctamente
+  window.closeAlmanaqueImportModal = function() {
+    const modal = document.querySelector('[style*="z-index: 10000"]');
+    const backdrop = document.querySelector('[style*="z-index: 9999"]');
+    if (modal) modal.remove();
+    if (backdrop) backdrop.remove();
+    delete window.closeAlmanaqueImportModal;
+  };
+  
+  backdrop.onclick = () => closeAlmanaqueImportModal();
+  
+  document.body.appendChild(backdrop);
+  document.body.appendChild(modal);
+};
+
+// FUNCIONES DE IMPORTACIÓN PARA ALMANAQUE
+window.importAlmanaqueFromJSON = function() {
+  document.getElementById('importAlmanaqueFile').click();
+  if (window.closeAlmanaqueImportModal) closeAlmanaqueImportModal();
+};
+
+window.importAlmanaqueFromCSV = function() {
+  // Filtrar para aceptar solo CSV y Excel
+  const importAlmanaqueFile = document.getElementById('importAlmanaqueFile');
+  importAlmanaqueFile.accept = '.csv,.xlsx,.xls';
+  importAlmanaqueFile.click();
+  if (window.closeAlmanaqueImportModal) closeAlmanaqueImportModal();
+};
+
+window.importAlmanaqueFromTXT = function() {
+  document.getElementById('importAlmanaqueFile').click();
+  if (window.closeAlmanaqueImportModal) closeAlmanaqueImportModal();
+};
+
+window.importAlmanaqueFromImage = function() {
+  document.getElementById('importAlmanaqueFile').click();
+  if (window.closeAlmanaqueImportModal) closeAlmanaqueImportModal();
+};
+
+window.importAlmanaqueFromWord = function() {
+  document.getElementById('importAlmanaqueFile').click();
+  if (window.closeAlmanaqueImportModal) closeAlmanaqueImportModal();
+};
+
+window.importAlmanaqueFromPDF = function() {
+  document.getElementById('importAlmanaqueFile').click();
+  if (window.closeAlmanaqueImportModal) closeAlmanaqueImportModal();
+};
 
 function splitDelimitedLine(line = "", delimiter = ",") {
   const values = [];
@@ -717,20 +1800,37 @@ function parseDelimitedRecords(text, fallbackDate = getNowDateTimeLocal()) {
     .map(line => line.trim())
     .filter(Boolean);
 
-  if (lines.length < 2) return [];
+  console.log(`📄 Procesando ${lines.length} líneas del CSV`);
+
+  if (lines.length < 2) {
+    console.log("❌ CSV vacío o sin datos suficientes");
+    return [];
+  }
 
   const delimiter = lines[0].includes(";") ? ";" : lines[0].includes("\t") ? "\t" : ",";
+  console.log(`🔍 Delimitador detectado: "${delimiter}"`);
+  
   const headers = splitDelimitedLine(lines[0], delimiter).map(mapImportedKey);
+  console.log(`📋 Columnas encontradas: ${headers.join(", ")}`);
 
-  return lines.slice(1).map(line => {
+  const records = lines.slice(1).map((line, index) => {
     const values = splitDelimitedLine(line, delimiter);
     const record = {};
-    headers.forEach((header, index) => {
-      record[header] = values[index] ?? "";
+    headers.forEach((header, colIndex) => {
+      record[header] = values[colIndex] ?? "";
     });
     if (!record.fecha) record.fecha = fallbackDate;
+    
+    // Logging para primeros registros
+    if (index < 3) {
+      console.log(`📝 Fila ${index + 1}: ${record.nombre || 'Sin nombre'} - ${record.cantidad || 0}€`);
+    }
+    
     return record;
   });
+
+  console.log(`✅ Parseados ${records.length} registros del CSV`);
+  return records;
 }
 
 function fileToDataUrl(file) {
@@ -741,6 +1841,168 @@ function fileToDataUrl(file) {
     reader.readAsDataURL(file);
   });
 }
+
+// FUNCIÓN PARA LIMPIAR ADJUNTOS PROBLEMÁTICOS
+window.limpiarAdjuntosProblematicos = function() {
+  console.log("🧹 LIMPIANDO ADJUNTOS PROBLEMÁTICOS");
+  
+  const antes = gastos.length;
+  
+  // Filtrar y eliminar registros problemáticos
+  const gastosLimpios = gastos.filter(gasto => {
+    // Eliminar FACTURA_SOLIDWORKS.pdf
+    if (gasto.nombre && gasto.nombre.includes("FACTURA_SOLIDWORKS.pdf")) {
+      console.log("🗑️ Eliminando:", gasto.nombre);
+      return false;
+    }
+    
+    // Eliminar registros con descripción de adjuntos automáticos
+    if (gasto.descripcion && (
+      gasto.descripcion.includes("Registro contable de Importado | Adjuntos:") ||
+      gasto.descripcion.includes("Registro contable de Importado | Adjuntos:")
+    )) {
+      console.log("🗑️ Eliminando:", gasto.descripcion);
+      return false;
+    }
+    
+    // Eliminar registros que sean solo adjuntos no deseados
+    if (gasto.tipo === "Importado" && gasto.nombre && (
+      gasto.nombre.includes(".pdf") ||
+      gasto.nombre.includes(".doc") ||
+      gasto.nombre.includes(".docx") ||
+      gasto.nombre.includes(".xls") ||
+      gasto.nombre.includes(".xlsx") ||
+      gasto.nombre.includes(".jpg") ||
+      gasto.nombre.includes(".jpeg") ||
+      gasto.nombre.includes(".png")
+    )) {
+      console.log("🗑️ Eliminando archivo adjunto no deseado:", gasto.nombre);
+      return false;
+    }
+    
+    return true;
+  });
+  
+  // Actualizar array
+  gastos.length = 0;
+  gastos.push(...gastosLimpios);
+  window.gastos = gastos;
+  
+  // Guardar en localStorage sin los adjuntos problemáticos
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(gastos));
+  
+  // Renderizar
+  render();
+  
+  console.log(`✅ Limpieza completada: ${antes - gastos.length} registros eliminados`);
+  console.log(`📊 Registros restantes: ${gastos.length}`);
+  
+  alert(`Se eliminaron ${antes - gastos.length} adjuntos problemáticos. La app ha sido limpiada.`);
+};
+
+// FUNCIÓN ESPECIAL PARA ADJUNTAR ARCHIVOS MANUALMENTE
+window.attachFileManually = function() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.bmp,.xls,.xlsx';
+  input.multiple = true;
+  
+  input.onchange = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    
+    try {
+      saveRecoverySnapshot("before-attach");
+      
+      for (const file of files) {
+        const data = await fileToDataUrl(file);
+        const record = createRecordFromAttachment(
+          { name: file.name, type: file.type, data }, 
+          "Adjunto", 
+          new Date().toISOString().slice(0, 10)
+        );
+        gastos.push(normalizeRecord(record));
+      }
+      
+      saveData();
+      render();
+      alert(`${files.length} archivo(s) adjuntado(s) correctamente.`);
+    } catch (error) {
+      alert("Error al adjuntar archivos: " + error.message);
+    }
+  };
+  
+  input.click();
+};
+
+// FUNCIÓN DE AYUDA DE FORMATOS
+window.showFormatHelp = function() {
+  const helpModal = document.createElement('div');
+  helpModal.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 10000;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+  `;
+  
+  helpModal.innerHTML = `
+    <h3 style="margin: 0 0 20px 0; color: #333;">Ayuda - Formatos de Importación</h3>
+    
+    <div style="margin-bottom: 20px;">
+      <h4 style="color: #333; margin-bottom: 10px;">📄 Formatos Directos (Recomendado):</h4>
+      <ul style="color: #666; line-height: 1.6;">
+        <li><strong>JSON:</strong> Formato original de la app, preserva todos los datos</li>
+        <li><strong>CSV:</strong> Compatible con Excel, Google Sheets, hojas de cálculo</li>
+        <li><strong>TXT:</strong> Archivo de texto simple con datos estructurados</li>
+      </ul>
+    </div>
+    
+    <div style="margin-bottom: 20px;">
+      <h4 style="color: #333; margin-bottom: 10px;">📎 Adjuntar Archivos:</h4>
+      <p style="color: #666; line-height: 1.6;">
+        Usa esta opción para adjuntar PDF, Word, Excel, Imágenes como registros de referencia. 
+        Los archivos se guardarán como registros adjuntos pero no procesarán su contenido automáticamente.
+      </p>
+    </div>
+    
+    <div style="margin-bottom: 20px;">
+      <h4 style="color: #333; margin-bottom: 10px;">⚠️ Formatos No Compatibles:</h4>
+      <p style="color: #666; line-height: 1.6;">
+        PDF, Word, Excel nativo, Imágenes no se procesan automáticamente. 
+        Debes convertirlos a CSV/TXT o usar "Adjuntar Archivo".
+      </p>
+    </div>
+    
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button onclick="this.closest('[style*=fixed]').remove()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f8f9fa; color: #333;">
+        Cerrar
+      </button>
+    </div>
+  `;
+  
+  const backdrop = document.createElement('div');
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+  `;
+  backdrop.onclick = () => helpModal.remove();
+  
+  document.body.appendChild(backdrop);
+  document.body.appendChild(helpModal);
+};
 
 async function parseRecordsFromFile(file, fallbackDate = getNowDateTimeLocal()) {
   const lowerName = String(file.name || "").toLowerCase();
@@ -764,6 +2026,16 @@ async function parseRecordsFromFile(file, fallbackDate = getNowDateTimeLocal()) 
     }
   }
 
+  // Para PDF, Word, Excel e Imagen - NO crear registros automáticamente
+  // Solo procesar si el usuario explícitamente lo solicita
+  if (file.type.includes("pdf") || /\.(pdf)$/i.test(lowerName) ||
+      file.type.includes("word") || /\.(doc|docx)$/i.test(lowerName) ||
+      file.type.includes("sheet") || /\.(xls|xlsx)$/i.test(lowerName) ||
+      file.type.includes("image") || /\.(jpg|jpeg|png|gif|bmp)$/i.test(lowerName)) {
+    throw new Error(`El archivo ${file.name} (${file.type}) no es un formato compatible. Por favor, conviértalo a CSV o TXT para importar.`);
+  }
+
+  // Solo para archivos adjuntos manuales (no automáticos)
   const data = await fileToDataUrl(file);
   return {
     mode: "append",
@@ -796,13 +2068,37 @@ async function importData(files) {
     if (replacePayload) {
       restoreColumns(replacePayload.customColumns || importedColumns);
       mergeCustomColumnsFromRecords(replacePayload.records);
-      gastos = replacePayload.records.map(normalizeRecord);
+      
+      // Para modo replace, primero limpiar todos los registros existentes
+      // usando la lógica de eliminación existente, luego agregar los nuevos
+      console.log(`🔄 Reemplazando datos: ${gastos.length} registros existentes serán eliminados`);
+      
+      // Eliminar registros existentes uno por uno para mantener consistencia
+      while (gastos.length > 0) {
+        gastos.pop(); // Eliminar del final para no afectar índices
+      }
+      
+      // Agregar nuevos registros usando addRow (única fuente de verdad)
+      console.log(`📥 Agregando ${replacePayload.records.length} nuevos registros...`);
+      for (const record of replacePayload.records) {
+        addRow(record, { skipSnapshot: true });
+      }
+      
       if (appendedRecords.length) {
-        appendedRecords.forEach(record => gastos.push(normalizeRecord(record)));
+        console.log(`📥 Agregando ${appendedRecords.length} registros adicionales...`);
+        for (const record of appendedRecords) {
+          addRow(record, { skipSnapshot: true });
+        }
       }
     } else if (appendedRecords.length) {
       mergeCustomColumnsFromRecords(appendedRecords);
-      appendedRecords.forEach(record => gastos.push(normalizeRecord(record)));
+      
+      // Usar addRow para cada registro importado (con sincronización Firebase)
+      console.log(`📥 Importando ${appendedRecords.length} registros con sincronización Firebase...`);
+      for (const record of appendedRecords) {
+        addRow(record, { skipSnapshot: true }); // Evitar múltiples snapshots
+      }
+      console.log("✅ Todos los registros importados y sincronizados con Firebase");
     } else {
       alert("No se pudieron importar registros desde los archivos seleccionados.");
       return;
@@ -812,7 +2108,21 @@ async function importData(files) {
     buildFormFields();
     saveData();
     render();
+    renderAlmanaque(); // Sincronizar Almanaque también
+    
+    // Mostrar resumen de importación
+    const totalImported = replacePayload ? 
+      replacePayload.records.length + appendedRecords.length : 
+      appendedRecords.length;
+    console.log(`📊 Importación completada: ${totalImported} registros procesados`);
+    console.log(`✅ Sincronización completa entre módulos:`);
+    console.log(`   - Registro de Contabilidad: ${document.querySelectorAll('#tabla-body tr').length} filas`);
+    console.log(`   - Almanaque: ${document.querySelectorAll('#almanaqueBody tr').length} filas`);
+    console.log(`   - Array gastos (fuente única): ${gastos.length} registros`);
+    console.log(`   - Firebase: Sincronizado automáticamente vía addRow()`);
+    
   } catch (error) {
+    console.error("❌ Error en importación:", error);
     alert("Error al importar archivos: " + error.message);
   }
 }
@@ -893,9 +2203,11 @@ function getAlmanaqueSummaryData() {
   const monthIndex = Number(almanaqueMonth.value);
   const dayValue = almanaqueDay ? almanaqueDay.value : "";
   const viewMode = almanaqueViewMode.value || "month";
+  const typeFilter = almanaqueTypeFilter?.value || "";
   const filtered = gastos.filter(g => {
     const date = new Date(g.fecha);
     if (isNaN(date.getTime()) || date.getFullYear() !== year) return false;
+    if (typeFilter && String(g.tipo) !== typeFilter) return false;
     if (viewMode === "year") return true;
     if (date.getMonth() !== monthIndex) return false;
     if (viewMode === "month") return true;
@@ -910,6 +2222,7 @@ function getAlmanaqueSummaryData() {
     monthIndex,
     dayValue,
     viewMode,
+    typeFilter,
     monthName: almanaqueMonth.options[almanaqueMonth.selectedIndex]?.textContent || String(monthIndex + 1),
     totalIncome,
     totalExpense,
@@ -922,16 +2235,16 @@ function exportAlmanaqueSummary() {
   const summary = getAlmanaqueSummaryData();
   if (!summary) return;
 
-  const header = ["Tipo", "Nombre", "Categoria", "Cantidad", "Descripcion", "Fecha Hora"];
+  const header = ["Tipo", "Fecha Hora", "Nombre", "Categoria", "Descripcion", "Cantidad"];
   const rows = summary.filtered
     .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)))
     .map(record => [
       record.tipo || "",
+      formatValue(record.fecha, "datetime"),
       record.nombre || "",
       record.categoria || "",
-      Number(record.cantidad || 0).toFixed(2),
       String(record.descripcion || "").replace(/\r?\n/g, " "),
-      formatValue(record.fecha, "datetime"),
+      Number(record.cantidad || 0).toFixed(2),
     ]);
 
   rows.push([]);
@@ -1013,7 +2326,7 @@ function populateAlmanaqueSelectors() {
   const currentYear = now.getFullYear();
 
   const years = [];
-  for (let y = currentYear; y >= currentYear - 5; y--) {
+  for (let y = currentYear; y <= 2030; y++) {
     years.push(y);
   }
 
@@ -1235,7 +2548,37 @@ function renderAlmanaque() {
     selectedDayInput.value = currentAlmanaqueSelectedDate;
   }
 
-  const filtered = [...summary.filtered].sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+  // Aplicar el mismo ordenamiento global que el Registro Contable
+  const filtered = [...summary.filtered].sort((a, b) => {
+    // Primero verificar ordenamiento por cantidad
+    if (tableSort.amount !== "default") {
+      const diff = (Number(a.cantidad) || 0) - (Number(b.cantidad) || 0);
+      if (diff !== 0) {
+        return tableSort.amount === "asc" ? diff : -diff;
+      }
+    }
+
+    // Luego verificar ordenamiento por fecha (con todas las opciones)
+    if (tableSort.date !== "default") {
+      const aDate = new Date(a.fecha).getTime() || 0;
+      const bDate = new Date(b.fecha).getTime() || 0;
+      
+      if (tableSort.date === "oldest" && aDate !== bDate) return aDate - bDate;
+      if (tableSort.date === "newest" && aDate !== bDate) return bDate - aDate;
+      if (tableSort.date === "current") {
+        const now = Date.now();
+        const aDiff = Math.abs(aDate - now);
+        const bDiff = Math.abs(bDate - now);
+        if (aDiff !== bDiff) return aDiff - bDiff;
+      }
+      if (tableSort.date === "asc" && aDate !== bDate) return aDate - bDate;  // Menor a Mayor
+      if (tableSort.date === "desc" && aDate !== bDate) return bDate - aDate;  // Mayor a Menor
+    }
+
+    // Por defecto, ordenar por fecha ascendente
+    return String(a.fecha).localeCompare(String(b.fecha));
+  });
+  
   almanaqueBody.innerHTML = "";
   if (!filtered.length) {
     const tr = document.createElement("tr");
@@ -1263,17 +2606,35 @@ function renderAlmanaque() {
   }
 
   if (almanaqueSummary) {
+    const typeSuffix =
+      summary.typeFilter === "Ingreso"
+        ? " de ingresos"
+        : summary.typeFilter === "Gasto"
+          ? " de gastos"
+          : "";
     const label =
       summary.viewMode === "year"
-        ? `Mostrando ${summary.filtered.length} movimientos del año ${summary.year}.`
+        ? `Mostrando ${summary.filtered.length} movimientos${typeSuffix} del año ${summary.year}.`
         : summary.viewMode === "month"
-          ? `Mostrando ${summary.filtered.length} movimientos de ${summary.monthName} ${summary.year}.`
-          : `Mostrando ${summary.filtered.length} movimientos del día ${summary.dayValue}/${String(summary.monthIndex + 1).padStart(2, "0")}/${summary.year}.`;
+          ? `Mostrando ${summary.filtered.length} movimientos${typeSuffix} de ${summary.monthName} ${summary.year}.`
+          : `Mostrando ${summary.filtered.length} movimientos${typeSuffix} del día ${summary.dayValue}/${String(summary.monthIndex + 1).padStart(2, "0")}/${summary.year}.`;
     almanaqueSummary.textContent = label;
   }
   if (almanaqueIncome) almanaqueIncome.textContent = summary.totalIncome.toFixed(2);
   if (almanaqueExpense) almanaqueExpense.textContent = summary.totalExpense.toFixed(2);
   if (almanaqueTotal) almanaqueTotal.textContent = summary.balance.toFixed(2);
+  const almanaqueTotalsBox = document.querySelector("#almanaquePanel .totals");
+  if (almanaqueTotalsBox) {
+    almanaqueTotalsBox.classList.add("totals-bordered");
+    const showOnlyIncome = summary.typeFilter === "Ingreso";
+    const showOnlyExpense = summary.typeFilter === "Gasto";
+    Array.from(almanaqueTotalsBox.children).forEach(child => {
+      const text = child.textContent || "";
+      if (text.startsWith("Ingresos")) child.hidden = showOnlyExpense;
+      if (text.startsWith("Gastos")) child.hidden = showOnlyIncome;
+      if (text.startsWith("Saldo")) child.hidden = showOnlyIncome || showOnlyExpense;
+    });
+  }
 }
 
 function buildFormFields() {
@@ -1317,20 +2678,41 @@ function buildFormFields() {
       return;
     } else {
       input.type = "text";
+      if (col.key === "nombre") {
+        input.setAttribute("list", "nombreSuggestions");
+      }
+      if (col.key === "descripcion") {
+        input.setAttribute("list", "descripcionSuggestions");
+      }
     }
 
     form.appendChild(input);
   });
 
+  const nombreSuggestions = document.createElement("datalist");
+  nombreSuggestions.id = "nombreSuggestions";
+  form.appendChild(nombreSuggestions);
+
+  const descripcionSuggestions = document.createElement("datalist");
+  descripcionSuggestions.id = "descripcionSuggestions";
+  form.appendChild(descripcionSuggestions);
+
   const actionGroup = document.createElement("div");
   actionGroup.className = "entry-form-actions";
 
-  const submitBtn = document.createElement("button");
-  submitBtn.type = "submit";
-  submitBtn.id = "btnAgregar";
-  submitBtn.className = "entry-form-action entry-form-action-primary";
-  submitBtn.textContent = editingRowId ? "Guardar cambios" : "Agregar";
-  actionGroup.appendChild(submitBtn);
+  if (editingRowId != null) {
+    const submitBtn = document.createElement("button");
+    submitBtn.type = "submit";
+    submitBtn.id = "btnAgregar";
+    submitBtn.className = "entry-form-action entry-form-action-primary";
+    submitBtn.textContent = "Guardar cambios";
+    actionGroup.appendChild(submitBtn);
+  } else {
+    const addModeSelect = document.createElement("select");
+    addModeSelect.id = "btnAgregar";
+    addModeSelect.className = "entry-form-action entry-form-action-primary entry-form-action-select";
+    actionGroup.appendChild(addModeSelect);
+  }
 
   const cancelBtn = document.createElement("button");
   cancelBtn.type = "button";
@@ -1342,6 +2724,7 @@ function buildFormFields() {
   actionGroup.appendChild(cancelBtn);
 
   form.appendChild(actionGroup);
+  bindEntryFormEnhancements();
 }
 
 function renderEntryFormLabels() {
@@ -1389,6 +2772,123 @@ function getFormValues() {
   return values;
 }
 
+function getFilteredMetadataRecords() {
+  const tipo = form.querySelector('[name="tipo"]')?.value || "";
+  const categoria = form.querySelector('[name="categoria"]')?.value || "";
+  return gastos.filter(record => {
+    const sameType = !tipo || normalizeText(record.tipo) === normalizeText(tipo);
+    const sameCategory = !categoria || normalizeText(record.categoria) === normalizeText(categoria);
+    return sameType && sameCategory;
+  });
+}
+
+function populateSuggestionList(listId, values) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  list.innerHTML = "";
+  [...new Set(values.filter(Boolean))].slice(0, 20).forEach(value => {
+    const option = document.createElement("option");
+    option.value = value;
+    list.appendChild(option);
+  });
+}
+
+function updateAddActionOptions() {
+  const addModeSelect = document.getElementById("btnAgregar");
+  if (!addModeSelect || addModeSelect.tagName !== "SELECT") return;
+  const tipo = form.querySelector('[name="tipo"]')?.value || "Gasto";
+  const isIncome = normalizeText(tipo) === "ingreso";
+  const singleLabel = isIncome ? "Agregar un ingreso" : "Agregar un pago";
+  const monthlyLabel = isIncome ? "Un registro mensual" : "Un registro mensual";
+  const yearlyLabel = isIncome ? "Ingreso Anual" : "Gasto Anual";
+  const monthlyUntilLabel = isIncome ? "Ingreso cada mes hasta fecha" : "Gasto cada mes hasta fecha";
+  const options = [
+    { value: "", label: "Agregar" },
+    { value: "single", label: singleLabel },
+    { value: "monthly-single", label: monthlyLabel },
+    { value: "yearly", label: yearlyLabel },
+    { value: "monthly-until", label: monthlyUntilLabel },
+    { value: "separator", label: "---", disabled: true },
+    { value: "delete-debts", label: "🗑️ Eliminar deudas a plazo" },
+    { value: "undo", label: "Deshacer" },
+  ];
+  addModeSelect.innerHTML = "";
+  options.forEach(optionData => {
+    const option = document.createElement("option");
+    option.value = optionData.value;
+    option.textContent = optionData.label;
+    addModeSelect.appendChild(option);
+  });
+  addModeSelect.value = "";
+}
+
+function refreshFormMetadata() {
+  const records = getFilteredMetadataRecords();
+  populateSuggestionList("nombreSuggestions", records.map(record => record.nombre));
+  populateSuggestionList("descripcionSuggestions", records.map(record => record.descripcion));
+}
+
+function applyKnownMetadataFromName() {
+  const nombreInput = form.querySelector('[name="nombre"]');
+  const categoriaInput = form.querySelector('[name="categoria"]');
+  const descripcionInput = form.querySelector('[name="descripcion"]');
+  const typedName = nombreInput?.value?.trim();
+  if (!typedName || !categoriaInput || !descripcionInput) return;
+
+  const match = [...getFilteredMetadataRecords()]
+    .reverse()
+    .find(record => normalizeText(record.nombre) === normalizeText(typedName));
+
+  if (!match) return;
+
+  if (!categoriaInput.value || categoriaInput.value === categories[0]) {
+    categoriaInput.value = match.categoria || categoriaInput.value;
+  }
+  if (!descripcionInput.value) {
+    descripcionInput.value = match.descripcion || "";
+  }
+}
+
+function bindEntryFormEnhancements() {
+  const tipoInput = form.querySelector('[name="tipo"]');
+  const categoriaInput = form.querySelector('[name="categoria"]');
+  const nombreInput = form.querySelector('[name="nombre"]');
+  const addModeSelect = document.getElementById("btnAgregar");
+
+  updateAddActionOptions();
+  refreshFormMetadata();
+
+  if (tipoInput) {
+    tipoInput.addEventListener("change", () => {
+      updateAddActionOptions();
+      refreshFormMetadata();
+    });
+  }
+
+  if (categoriaInput) {
+    categoriaInput.addEventListener("change", refreshFormMetadata);
+  }
+
+  if (nombreInput) {
+    nombreInput.addEventListener("blur", applyKnownMetadataFromName);
+  }
+
+  if (addModeSelect && addModeSelect.tagName === "SELECT") {
+    addModeSelect.addEventListener("change", () => {
+      const nextMode = addModeSelect.value || "";
+      if (!nextMode) return;
+      if (nextMode === "undo") {
+        restoreLastSnapshot();
+        pendingAddMode = "single";
+        updateAddActionOptions();
+        return;
+      }
+      pendingAddMode = nextMode;
+      form.requestSubmit();
+    });
+  }
+}
+
 function clearForm() {
   columns.forEach(col => {
     const input = form.querySelector(`[name="${col.key}"]`);
@@ -1408,6 +2908,9 @@ function clearForm() {
   });
 
   form.querySelector("input")?.focus();
+  pendingAddMode = "single";
+  updateAddActionOptions();
+  refreshFormMetadata();
 }
 
 function cancelEditing() {
@@ -1430,6 +2933,7 @@ function fillForm(values = {}) {
 
     input.value = values[col.key] ?? "";
   });
+  refreshFormMetadata();
 }
 
 function startEditingRecord(record) {
@@ -1521,8 +3025,7 @@ function parseValue(raw, type, rowIndex = 0) {
     const parsed = new Date(raw);
     if (isNaN(parsed.getTime())) return "";
 
-    const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000);
-    return local.toISOString().slice(0, 16);
+    return formatLocalDate(parsed);
   }
 
   return raw;
@@ -1592,14 +3095,17 @@ function getFilteredEntries() {
     if (tableSort.date !== "default") {
       const aDate = new Date(a.fecha).getTime() || 0;
       const bDate = new Date(b.fecha).getTime() || 0;
-      if (tableSort.date === "oldest" && aDate !== bDate) return aDate - bDate;
-      if (tableSort.date === "newest" && aDate !== bDate) return bDate - aDate;
+      
+      if (tableSort.date === "oldest" && aDate !== bDate) return aDate - bDate;      // Antiguas
+      if (tableSort.date === "newest" && aDate !== bDate) return bDate - aDate;      // Nuevas
       if (tableSort.date === "current") {
         const now = Date.now();
         const aDiff = Math.abs(aDate - now);
         const bDiff = Math.abs(bDate - now);
         if (aDiff !== bDiff) return aDiff - bDiff;
       }
+      if (tableSort.date === "asc" && aDate !== bDate) return aDate - bDate;        // Menor a Mayor 🆕
+      if (tableSort.date === "desc" && aDate !== bDate) return bDate - aDate;       // Mayor a Menor 🆕
     }
 
     return 0;
@@ -1654,7 +3160,7 @@ function refreshDateFilterOptions() {
   if (filterYear) {
     const previous = filterYear.value;
     filterYear.innerHTML = '<option value="">Año</option>';
-    for (let year = 2020; year <= 2027; year++) {
+    for (let year = 2020; year <= 2030; year++) {
       const option = document.createElement("option");
       option.value = String(year);
       option.textContent = String(year);
@@ -2155,7 +3661,7 @@ function ensureChart(type = "bar", datasetCount = 1) {
 
   if (!dashboardCanvas) return;
   const ctx = dashboardCanvas.getContext("2d");
-  const palette = themePalette[currentTheme] || themePalette.blue;
+  const palette = themePalette[currentTheme] || themePalette.natural;
 
   const textColor = getCssVar("--text") || "#000";
   const gridColor = getCssVar("--table-border") || "rgba(0,0,0,0.1)";
@@ -2300,6 +3806,8 @@ function buildTableHeader() {
           { value: "oldest", label: "Antiguas" },
           { value: "newest", label: "Nuevas" },
           { value: "current", label: "F actual" },
+          { value: "asc", label: "Menor a Mayor" },
+          { value: "desc", label: "Mayor a Menor" },
         ].forEach(optionData => {
           const option = document.createElement("option");
           option.value = optionData.value;
@@ -2339,15 +3847,54 @@ function buildTableHeader() {
   const actionsLabel = document.createElement("span");
   actionsLabel.textContent = "Acción";
   const resetButton = document.createElement("button");
-  resetButton.type = "button";
-  resetButton.className = "header-sort";
+  resetButton.className = "header-sort reset-button";
   resetButton.textContent = "Restablecer";
   resetButton.addEventListener("click", () => {
+    console.log("🔄 Click en botón Restablecer");
+    console.log("📊 Estado antes de reset - Filtros:", tableFilters, "Orden:", tableSort);
+    
+    // Feedback visual inmediato
+    resetButton.style.transform = "scale(0.95)";
+    resetButton.style.background = "var(--primary-dark)";
+    
+    // Aplicar el reset
     tableFilters.tipo = "";
     tableFilters.categoria = "";
     tableSort.amount = "default";
     tableSort.date = "default";
+    
+    console.log("🔄 Filtros y ordenación reiniciados");
+    console.log("📊 Estado después de reset - Filtros:", tableFilters, "Orden:", tableSort);
+    
+    // Actualizar selects si existen
+    if (sortAmount) {
+      sortAmount.value = "default";
+      console.log("✅ sortAmount actualizado a default");
+    } else {
+      console.warn("⚠️ sortAmount no encontrado");
+    }
+    
+    if (sortDate) {
+      sortDate.value = "default";
+      console.log("✅ sortDate actualizado a default");
+    } else {
+      console.warn("⚠️ sortDate no encontrado");
+    }
+    
+    // Actualizar ambas vistas
+    console.log("🔄 Actualizando vistas...");
     render();
+    renderAlmanaque();
+    console.log("✅ Vistas actualizadas");
+    
+    // Restaurar colores del tema después de un breve delay
+    setTimeout(() => {
+      resetButton.style.transform = "scale(1)";
+      resetButton.style.background = "var(--primary)";
+      console.log("✅ Botón restablecer visual restaurado");
+    }, 150);
+    
+    console.log("🔄 Restablecimiento completo: filtros y ordenación reiniciados");
   });
   actionsWrapper.appendChild(actionsLabel);
   actionsWrapper.appendChild(resetButton);
@@ -2358,11 +3905,13 @@ function buildTableHeader() {
   return thead;
 }
 
-function addRow(values = {}) {
-  saveRecoverySnapshot("add-row");
+function addRow(values = {}, options = {}) {
+  if (!options.skipSnapshot) {
+    saveRecoverySnapshot("add-row");
+  }
   lastDeleted = null;
   setUndoVisible(false);
-  const row = { id: Date.now() };
+  const row = { id: createUniqueId() };
   columns.forEach(col => {
     if (values[col.key] != null && values[col.key] !== "") {
       row[col.key] = values[col.key];
@@ -2381,7 +3930,541 @@ function addRow(values = {}) {
   row.attachments = values.attachments || [];
 
   gastos.push(normalizeRecord(row));
+  
+  // Sincronizar con Firebase (sin afectar la lógica actual)
+  if (typeof window.guardarGastoEnFirebase === 'function') {
+    const nuevoGasto = normalizeRecord(row);
+    window.guardarGastoEnFirebase(nuevoGasto);
+  }
+  
   focusAfterRender = { row: gastos.length - 1, col: 0 };
+}
+
+function getRecurringDates(startDateValue, mode) {
+  if (mode === "single") return [startDateValue];
+  const startDate = new Date(startDateValue);
+  if (isNaN(startDate.getTime())) return [startDateValue];
+
+  const dates = [];
+  const cursor = new Date(startDate);
+  const limitYear = 2030;
+  const anchorDay = startDate.getDate();
+
+  while (cursor.getFullYear() <= limitYear) {
+    dates.push(formatLocalDate(cursor));
+    if (mode === "monthly") {
+      cursor.setMonth(cursor.getMonth() + 1, 1);
+      const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+      cursor.setDate(Math.min(anchorDay, daysInMonth));
+    } else if (mode === "yearly") {
+      cursor.setFullYear(cursor.getFullYear() + 1, cursor.getMonth(), anchorDay);
+    } else {
+      break;
+    }
+  }
+
+  return dates;
+}
+
+function getRecordIdentityKey(values = {}) {
+  return [
+    normalizeComparableText(values.tipo),
+    normalizeComparableText(values.nombre),
+    normalizeComparableText(values.categoria),
+    normalizeComparableText(values.descripcion),
+    Number(values.cantidad || 0).toFixed(2),
+  ].join("|");
+}
+
+function getRecordPeriodKey(dateValue, mode = "single") {
+  const date = String(dateValue || "");
+  if (mode === "monthly") return date.slice(0, 7);
+  if (mode === "yearly") return date.slice(0, 4);
+  return date.slice(0, 10);
+}
+
+function hasDuplicateForMode(values, dateValue, mode = "single") {
+  const targetIdentity = getRecordIdentityKey(values);
+  const targetPeriod = getRecordPeriodKey(dateValue, mode);
+
+  return gastos.some(record => {
+    const recordIdentity = getRecordIdentityKey(record);
+    const recordPeriod = getRecordPeriodKey(record.fecha, mode);
+    return recordIdentity === targetIdentity && recordPeriod === targetPeriod;
+  });
+}
+
+function addRowsFromMode(values, mode = "single") {
+  // Manejar opción especial de eliminar deudas
+  if (mode === "delete-debts") {
+    return deleteDebtRecords();
+  }
+  
+  // Manejar opción monthly-until
+  if (mode === "monthly-until") {
+    return showMonthlyUntilDialog(values);
+  }
+  
+  // Manejar opción monthly-single (un solo registro mensual)
+  if (mode === "monthly-single") {
+    return addSingleMonthlyRecord(values);
+  }
+  
+  const dates = getRecurringDates(values.fecha || getNowDateTimeLocal(), mode);
+  const groupId = mode === "single" ? null : `series-${createUniqueId()}`;
+  saveRecoverySnapshot(mode === "single" ? "add-row" : `add-row-${mode}`);
+  lastDeleted = null;
+  setUndoVisible(false);
+  let added = 0;
+  let skipped = 0;
+  dates.forEach((dateValue, index) => {
+    if (hasDuplicateForMode(values, dateValue, mode)) {
+      skipped += 1;
+      return;
+    }
+    addRow({
+      ...values,
+      fecha: dateValue,
+      recurrenceMode: mode,
+      recurrenceGroup: groupId,
+      recurrenceIndex: index,
+    }, { skipSnapshot: true });
+    added += 1;
+  });
+
+  return { added, skipped };
+}
+
+function deleteDebtRecords() {
+  console.log('🔍 Buscando registros de deuda a plazo...');
+  
+  // Búsqueda más específica y precisa
+  const debtRecords = gastos.filter(gasto => {
+    const nombre = (gasto.nombre || '').toLowerCase();
+    const descripcion = (gasto.descripcion || '').toLowerCase();
+    const categoria = (gasto.categoria || '').toLowerCase();
+    const searchText = nombre + ' ' + descripcion + ' ' + categoria;
+    
+    // Búsqueda específica para iPhone-1000 o variantes
+    const isIPhoneDebt = searchText.includes('iphone-1000') || 
+                       searchText.includes('iphone 1000') ||
+                       searchText.includes('iphone1000');
+    
+    // Búsqueda específica para términos de deuda
+    const isDebtTerm = searchText.includes('deuda a plazo') ||
+                      searchText.includes('cuota iphone') ||
+                      searchText.includes('financiamiento iphone') ||
+                      (searchText.includes('pago mensual') && searchText.includes('iphone'));
+    
+    // Solo incluir si es claramente una deuda
+    return isIPhoneDebt || isDebtTerm;
+  });
+  
+  console.log('🎯 Registros de deuda encontrados:', debtRecords);
+  
+  if (debtRecords.length === 0) {
+    alert('ℹ️ No se encontraron registros específicos de deuda a plazo (iPhone-1000, etc.)');
+    return { added: 0, skipped: 0 };
+  }
+  
+  // Mostrar detalles más precisos
+  const detailsList = debtRecords.map(r => {
+    const date = new Date(r.fecha).toLocaleDateString();
+    const amount = r.cantidad ? `${r.cantidad}€` : 'N/A';
+    const name = r.nombre || r.descripcion || 'Sin descripción';
+    return `• ${date} - ${name} (${amount})`;
+  });
+  
+  const confirmMessage = `Se encontraron ${debtRecords.length} registros de deuda a plazo:\n\n` +
+    detailsList.slice(0, 5).join('\n') +
+    (debtRecords.length > 5 ? `\n... y ${debtRecords.length - 5} más` : '') +
+    '\n\n¿Deseas eliminar estos registros de deuda?';
+  
+  if (!confirm(confirmMessage)) {
+    return { added: 0, skipped: 0 };
+  }
+  
+  // Eliminar registros de manera segura
+  const deletedCount = debtRecords.length;
+  const idsToDelete = debtRecords.map(r => r.id);
+  
+  // Eliminar en orden inverso para evitar problemas de índice
+  idsToDelete.reverse().forEach(id => {
+    const index = gastos.findIndex(g => g.id === id);
+    if (index !== -1) {
+      console.log(`🗑️ Eliminando registro ID ${id}:`, gastos[index]);
+      gastos.splice(index, 1);
+    }
+  });
+  
+  // Guardar y renderizar
+  saveData();
+  render();
+  renderAlmanaque();
+  
+  alert(`✅ Se eliminaron ${deletedCount} registros de deuda a plazo correctamente`);
+  console.log(`🗑️ Eliminados ${deletedCount} registros de deuda:`, debtRecords);
+  
+  return { added: 0, skipped: deletedCount };
+}
+
+function showMonthlyUntilDialog(values) {
+  const modal = document.createElement('div');
+  modal.className = 'date-range-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 10000;
+    min-width: 400px;
+    max-width: 500px;
+  `;
+  
+  const referenceDate = new Date(values.fecha || getNowDateTimeLocal());
+  const futureDate = new Date(referenceDate);
+  futureDate.setMonth(futureDate.getMonth() + 12); // Por defecto 1 año
+  
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>${getDialogTitle(values.tipo, 'monthly-until')}</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Fecha de inicio:</label>
+        <input type="date" id="startDate" class="form-input" value="${referenceDate.toISOString().slice(0, 10)}">
+      </div>
+      <div class="form-group">
+        <label>Fecha de fin:</label>
+        <input type="date" id="endDate" class="form-input" value="${getEndDate('monthly-until', referenceDate).toISOString().slice(0, 10)}">
+      </div>
+      <div class="form-group">
+        <label>Día del mes:</label>
+        <input type="number" id="dayOfMonth" class="form-input" value="${values.dayOfMonth || 1}" min="1" max="31">
+        <small>Se generará un registro cada mes en este día</small>
+      </div>
+      <div class="form-group">
+        <label>Descripción:</label>
+        <input type="text" id="recordDescription" class="form-input" value="${values.descripcion || ''}" placeholder="Descripción del registro">
+      </div>
+      <div class="form-group">
+        <label>Nombre:</label>
+        <input type="text" id="recordName" class="form-input" value="${values.nombre || ''}" placeholder="Nombre del registro">
+      </div>
+      <div class="form-group">
+        <label>Cantidad:</label>
+        <input type="number" id="recordAmount" class="form-input" value="${values.cantidad || 0}" step="0.01" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>Categoría:</label>
+        <input type="text" id="recordCategory" class="form-input" value="${values.categoria || ''}" placeholder="Ej: Comida, Transporte">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancelBtn">Cancelar</button>
+      <button class="btn btn-primary" id="generateBtn">Generar Registros</button>
+    </div>
+  `;
+  
+  // Añadir backdrop
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+  `;
+  
+  // Event listeners
+  modal.querySelector('.modal-close').addEventListener('click', () => {
+    modal.remove();
+    backdrop.remove();
+  });
+  
+  modal.querySelector('#cancelBtn').addEventListener('click', () => {
+    modal.remove();
+    backdrop.remove();
+  });
+  
+  modal.querySelector('#generateBtn').addEventListener('click', () => {
+    console.log("🔥 Botón mensual ejecutado");
+    generateMonthlyUntilRecords(modal, values);
+  });
+  
+  backdrop.addEventListener('click', () => {
+    modal.remove();
+    backdrop.remove();
+  });
+  
+  document.body.appendChild(backdrop);
+  document.body.appendChild(modal);
+  
+  return { added: 0, skipped: 0 };
+}
+
+function formatLocalDate(date) {
+  const pad = (n) => String(n).padStart(2, '0');
+
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function generateMonthlyUntilRecords(modal, baseValues) {
+  const startDate = new Date(baseValues.fecha);
+  const endDate = new Date(modal.querySelector('#endDate').value);
+
+  if (isNaN(startDate) || isNaN(endDate)) {
+    console.error("❌ Fechas inválidas");
+    return;
+  }
+
+  const targetDay = startDate.getDate();
+
+  let year = startDate.getFullYear();
+  let month = startDate.getMonth();
+
+  while (true) {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // 👉 Mantener el día original SIEMPRE
+    const safeDay = targetDay <= daysInMonth ? targetDay : daysInMonth;
+
+    const recordDate = new Date(year, month, safeDay);
+
+    // 👉 condición correcta para incluir último mes
+    if (recordDate > endDate) break;
+
+    addRow({
+      tipo: baseValues.tipo,
+      nombre: baseValues.nombre,
+      categoria: baseValues.categoria,
+      cantidad: baseValues.cantidad,
+      descripcion: baseValues.descripcion,
+      fecha: formatLocalDate(recordDate)
+    });
+
+    // avanzar mes manualmente (SIN setMonth)
+    month++;
+    if (month > 11) {
+      month = 0;
+      year++;
+    }
+  }
+
+  console.log("✅ Registros mensuales generados correctamente");
+
+  // 🔥 CERRAR MODAL AUTOMÁTICAMENTE
+  const backdrop = document.querySelector('.modal-backdrop');
+  if (backdrop) backdrop.remove();
+  if (modal) modal.remove();
+}
+
+function addSingleMonthlyRecord(values) {
+  console.log('📅 Agregando un solo registro mensual:', values);
+  
+  // Usar la fecha exacta que proporcionó el usuario
+  const fecha = values.fecha || getNowDateTimeLocal();
+  
+  // Verificar si ya existe un registro duplicado
+  if (hasDuplicateForMode(values, fecha, 'single')) {
+    console.log('⚠️ El registro ya existe, no se agrega');
+    return { added: 0, skipped: 1 };
+  }
+  
+  // Agregar el registro con modo monthly-single para identificarlo
+  addRow({
+    ...values,
+    fecha: fecha,
+    recurrenceMode: 'monthly-single',
+    recurrenceGroup: null,
+    recurrenceIndex: 0,
+  }, { skipSnapshot: true });
+  
+  saveData();
+  render();
+  renderAlmanaque();
+  
+  console.log('✅ Registro mensual individual agregado correctamente');
+  
+  return { added: 1, skipped: 0 };
+}
+
+// Función para generar registros diarios hasta fecha
+function generateDailyUntilRecords(modal, baseValues) {
+  const startDate = new Date(modal.querySelector('#startDate').value);
+  const endDate = new Date(modal.querySelector('#endDate').value);
+  const recordName = modal.querySelector('#recordName').value;
+  const recordDescription = modal.querySelector('#recordDescription').value;
+  const recordAmount = parseFloat(modal.querySelector('#recordAmount').value) || 0;
+  const recordCategory = modal.querySelector('#recordCategory').value;
+  
+  console.log('🔍 Generando registros diarios:', {
+    startDate: startDate.toISOString().slice(0, 10),
+    endDate: endDate.toISOString().slice(0, 10),
+    recordName,
+    recordDescription,
+    recordAmount,
+    recordCategory
+  });
+  
+  if (!startDate || !endDate || startDate >= endDate) {
+    alert('Por favor, selecciona un rango de fechas válido');
+    return;
+  }
+  
+  if (!recordCategory) {
+    alert('Por favor, ingresa una categoría');
+    return;
+  }
+  
+  const records = [];
+  let currentDate = new Date(startDate);
+  
+  while (currentDate <= endDate) {
+    const record = {
+      id: createUniqueId(),
+      fecha: formatLocalDate(currentDate),
+      tipo: baseValues.tipo || 'Gasto',
+      categoria: recordCategory,
+      descripcion: recordDescription || `${baseValues.tipo || 'Gasto'} - ${recordCategory}`,
+      cantidad: recordAmount,
+      nombre: recordName || recordCategory
+    };
+    
+    records.push(record);
+    console.log('✅ Registro diario agregado:', record.fecha.slice(0, 10));
+    
+    // Avanzar al siguiente día
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  // Agregar registros al array gastos
+  gastos.push(...records);
+  
+  // Guardar y renderizar
+  saveData();
+  render();
+  renderAlmanaque();
+  
+  // Mostrar confirmación
+  alert(`✅ Se generaron ${records.length} registros diarios desde ${startDate.toLocaleDateString()} hasta ${endDate.toLocaleDateString()}`);
+  
+  console.log(`📊 Generados ${records.length} registros diarios:`, records);
+  
+  return { added: records.length, skipped: 0 };
+}
+
+// Función para generar registros anuales hasta fecha
+function generateYearlyUntilRecords(modal, baseValues) {
+  const startDate = new Date(modal.querySelector('#startDate').value);
+  const endDate = new Date(modal.querySelector('#endDate').value);
+  const monthOfYear = parseInt(modal.querySelector('#monthOfYear').value) - 1; // JavaScript usa 0-11 para meses
+  const recordName = modal.querySelector('#recordName').value;
+  const recordDescription = modal.querySelector('#recordDescription').value;
+  const recordAmount = parseFloat(modal.querySelector('#recordAmount').value) || 0;
+  const recordCategory = modal.querySelector('#recordCategory').value;
+  
+  console.log('🔍 Generando registros anuales:', {
+    startDate: startDate.toISOString().slice(0, 10),
+    endDate: endDate.toISOString().slice(0, 10),
+    monthOfYear: monthOfYear + 1,
+    recordName,
+    recordDescription,
+    recordAmount,
+    recordCategory
+  });
+  
+  if (!startDate || !endDate || startDate >= endDate) {
+    alert('Por favor, selecciona un rango de fechas válido');
+    return;
+  }
+  
+  if (!recordCategory) {
+    alert('Por favor, ingresa una categoría');
+    return;
+  }
+  
+  if (monthOfYear < 0 || monthOfYear > 11) {
+    alert('Por favor, ingresa un mes válido (1-12)');
+    return;
+  }
+  
+  const records = [];
+  let currentYear = startDate.getFullYear();
+  
+  while (currentYear <= endDate.getFullYear()) {
+    const recordDate = new Date(currentYear, monthOfYear, 1);
+    
+    // Verificar que la fecha esté dentro del rango
+    if (recordDate >= startDate && recordDate <= endDate) {
+      const record = {
+        id: createUniqueId(),
+        fecha: formatLocalDate(recordDate),
+        tipo: baseValues.tipo || 'Gasto',
+        categoria: recordCategory,
+        descripcion: recordDescription || `${baseValues.tipo || 'Gasto'} - ${recordCategory}`,
+        cantidad: recordAmount,
+        nombre: recordName || recordCategory
+      };
+      
+      records.push(record);
+      console.log('✅ Registro anual agregado:', record.fecha.slice(0, 10));
+    }
+    
+    // Avanzar al siguiente año
+    currentYear++;
+  }
+  
+  // Agregar registros al array gastos
+  gastos.push(...records);
+  
+  // Guardar y renderizar
+  saveData();
+  render();
+  renderAlmanaque();
+  
+  // Mostrar confirmación
+  alert(`✅ Se generaron ${records.length} registros anuales desde ${startDate.toLocaleDateString()} hasta ${endDate.toLocaleDateString()}`);
+  
+  console.log(`📊 Generados ${records.length} registros anuales:`, records);
+  
+  return { added: records.length, skipped: 0 };
+}
+
+function getVisibleTotalsSummary(rows) {
+  const totalIncome = rows.reduce((sum, gasto) => {
+    if (String(gasto.tipo).toLowerCase() === "ingreso") {
+      return sum + (Number(gasto.cantidad) || 0);
+    }
+    return sum;
+  }, 0);
+
+  const totalExpense = rows.reduce((sum, gasto) => {
+    if (String(gasto.tipo).toLowerCase() === "gasto") {
+      return sum + (Number(gasto.cantidad) || 0);
+    }
+    return sum;
+  }, 0);
+
+  return {
+    totalIncome,
+    totalExpense,
+    balance: totalIncome - totalExpense,
+  };
 }
 
 function addEmptyRow() {
@@ -2462,25 +4545,24 @@ function render() {
     tablaBody.appendChild(tr);
   });
 
-  const totalIncome = gastos.reduce((sum, gasto) => {
-    if (String(gasto.tipo).toLowerCase() === "ingreso") {
-      return sum + (Number(gasto.cantidad) || 0);
-    }
-    return sum;
-  }, 0);
-
-  const totalExpense = gastos.reduce((sum, gasto) => {
-    if (String(gasto.tipo).toLowerCase() === "gasto") {
-      return sum + (Number(gasto.cantidad) || 0);
-    }
-    return sum;
-  }, 0);
-
-  const balance = totalIncome - totalExpense;
+  const { totalIncome, totalExpense, balance } = getVisibleTotalsSummary(visibleRows);
+  const hasOnlyIncomes = visibleRows.length > 0 && visibleRows.every(item => normalizeText(item.tipo) === "ingreso");
+  const hasOnlyExpenses = visibleRows.length > 0 && visibleRows.every(item => normalizeText(item.tipo) === "gasto");
 
   document.getElementById("total-income").textContent = totalIncome.toFixed(2);
   document.getElementById("total-expense").textContent = totalExpense.toFixed(2);
   totalSpan.textContent = balance.toFixed(2);
+  const totalsBox = document.querySelector("#entriesPanel .totals");
+  if (totalsBox) {
+    totalsBox.classList.add("totals-bordered");
+    totalsBox.classList.toggle("totals-single", hasOnlyIncomes || hasOnlyExpenses);
+    Array.from(totalsBox.children).forEach(child => {
+      const text = child.textContent || "";
+      if (text.startsWith("Ingresos")) child.hidden = hasOnlyExpenses;
+      if (text.startsWith("Gastos")) child.hidden = hasOnlyIncomes;
+      if (text.startsWith("Saldo")) child.hidden = hasOnlyExpenses || hasOnlyIncomes;
+    });
+  }
   if (entriesSummary) {
     entriesSummary.textContent =
       visibleRows.length === gastos.length
@@ -2509,8 +4591,18 @@ function focusCell(rowIndex, colIndex) {
 }
 
 function deleteRowById(rowId) {
+  console.log('🗑️ Intentando eliminar registro con ID:', rowId);
+  console.log('📊 Total registros antes de eliminar:', gastos.length);
+  
   const index = gastos.findIndex(row => row.id === rowId);
-  if (index === -1) return;
+  if (index === -1) {
+    console.error('❌ No se encontró el registro con ID:', rowId);
+    console.log('📋 IDs disponibles:', gastos.map(g => g.id));
+    return;
+  }
+
+  const recordToDelete = gastos[index];
+  console.log('🎯 Registro a eliminar:', recordToDelete);
 
   saveRecoverySnapshot("delete-row");
   lastDeleted = { row: gastos[index], index };
@@ -2520,7 +4612,12 @@ function deleteRowById(rowId) {
     cancelEditing();
   }
 
+  saveData();
   render();
+  renderAlmanaque();
+  
+  console.log('✅ Registro eliminado correctamente');
+  console.log('📊 Total registros después de eliminar:', gastos.length);
 }
 
 function createRowActionsCell(gasto) {
@@ -2538,12 +4635,780 @@ function createRowActionsCell(gasto) {
   deleteBtn.type = "button";
   deleteBtn.textContent = "Eliminar";
   deleteBtn.className = "danger-button";
-  deleteBtn.addEventListener("click", () => deleteRowById(gasto.id));
+  deleteBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showDeleteActionsMenu(e, gasto);
+  });
 
   wrapper.appendChild(editBtn);
   wrapper.appendChild(deleteBtn);
   td.appendChild(wrapper);
   return td;
+}
+
+function showDeleteActionsMenu(event, gasto) {
+  // Cerrar menús existentes
+  closeAllActionsMenus();
+  
+  const menu = document.createElement('div');
+  menu.className = 'actions-menu';
+  menu.style.cssText = `
+    position: fixed;
+    background: white;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    min-width: 220px;
+    padding: 8px 0;
+  `;
+  
+  // Guardar el ID del gasto en el menú para recuperarlo después
+  menu.dataset.gastoId = gasto.id;
+  
+  menu.innerHTML = `
+    <div class="actions-menu-section">
+      <div class="actions-menu-title">Opciones de Eliminación</div>
+      <button class="actions-menu-item" data-action="eliminar-este">
+        <span>🗑️</span> Eliminar este registro
+      </button>
+      <button class="actions-menu-item" data-action="eliminar-desde-hasta">
+        <span>📅</span> Eliminar desde y hasta
+      </button>
+      <button class="actions-menu-item" data-action="eliminar-todos-siguientes">
+        <span>⏭️</span> Eliminar todos los siguientes
+      </button>
+      <button class="actions-menu-item" data-action="eliminar-todos">
+        <span>🧹</span> Eliminar todos los registros
+      </button>
+    </div>
+    <div class="actions-menu-section">
+      <div class="actions-menu-title">Generación de Registros</div>
+      <button class="actions-menu-item" data-action="gastos-mensual">
+        <span>💰</span> Gastos Mensual
+      </button>
+      <button class="actions-menu-item" data-action="gastos-anual">
+        <span>📆</span> Gastos Anual
+      </button>
+      <button class="actions-menu-item" data-action="ingresos-mensual">
+        <span>📈</span> Ingresos Mensual
+      </button>
+      <button class="actions-menu-item" data-action="ingresos-anual">
+        <span>📊</span> Ingresos Anual
+      </button>
+      <button class="actions-menu-item" data-action="gastos-diario">
+        <span>📅</span> Gastos cada día hasta
+      </button>
+      <button class="actions-menu-item" data-action="ingresos-diario">
+        <span>📈</span> Ingresos cada día hasta
+      </button>
+      <button class="actions-menu-item" data-action="gastos-anual-hasta">
+        <span>🗓️</span> Gastos cada año hasta
+      </button>
+      <button class="actions-menu-item" data-action="ingresos-anual-hasta">
+        <span>📊</span> Ingresos cada año hasta
+      </button>
+    </div>
+    <div class="actions-menu-section">
+      <div class="actions-menu-title">Otros</div>
+      <button class="actions-menu-item" data-action="editar">
+        <span>✏️</span> Editar este registro
+      </button>
+    </div>
+  `;
+  
+  // Posicionar menú más centrado en la pantalla
+  const rect = event.target.getBoundingClientRect();
+  const menuWidth = 220; // min-width del menú
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  // Calcular posición horizontal centrada
+  let leftPosition = rect.left + (rect.width / 2) - (menuWidth / 2);
+  
+  // Asegurar que el menú no salga de la pantalla horizontalmente
+  if (leftPosition < 10) {
+    leftPosition = 10;
+  } else if (leftPosition + menuWidth > viewportWidth - 10) {
+    leftPosition = viewportWidth - menuWidth - 10;
+  }
+  
+  // Calcular posición vertical
+  let topPosition = rect.bottom + 5;
+  
+  // Si el menú se sale por abajo, mostrarlo arriba del botón
+  if (topPosition + 300 > viewportHeight) { // 300px aprox altura del menú
+    topPosition = rect.top - 300 - 5;
+  }
+  
+  // Asegurar que no salga por arriba
+  if (topPosition < 10) {
+    topPosition = 10;
+  }
+  
+  menu.style.left = leftPosition + 'px';
+  menu.style.top = topPosition + 'px';
+  
+  // Añadir event listeners
+  menu.querySelectorAll('.actions-menu-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const action = item.dataset.action;
+      
+      // Recuperar el gasto del array usando el ID guardado en el menú
+      const gastoId = menu.dataset.gastoId;
+      console.log('🔍 Buscando gasto con ID:', gastoId, ' Tipo:', typeof gastoId);
+      
+      // Mostrar IDs disponibles para depuración
+      console.log('📋 IDs disponibles en gastos:', gastos.map(g => ({ id: g.id, tipo: typeof g.id })));
+      
+      // Comparación flexible de IDs (string vs number)
+      const gasto = gastos.find(g => String(g.id) === String(gastoId));
+      
+      if (gasto) {
+        console.log('✅ Gasto encontrado:', {
+          id: gasto.id,
+          tipo: typeof gasto.id,
+          fecha: gasto.fecha,
+          descripcion: gasto.descripcion,
+          categoria: gasto.categoria
+        });
+        handleDeleteAction(action, gasto);
+      } else {
+        console.error('❌ No se encontró el gasto con ID:', gastoId);
+        console.log('📊 Estados de comparación:');
+        gastos.forEach(g => {
+          const gIdStr = String(g.id);
+          const gastoIdStr = String(gastoId);
+          console.log(`  - g.id: ${g.id} (${typeof g.id}) -> "${gIdStr}" vs "${gastoIdStr}" (${gIdStr === gastoIdStr ? '✅' : '❌'})`);
+        });
+        alert('Error: No se encontró el registro seleccionado');
+      }
+      
+      menu.remove();
+    });
+  });
+  
+  // Cerrar al hacer click fuera
+  const closeMenuHandler = function() {
+    menu.remove();
+    document.removeEventListener('click', closeMenuHandler);
+  };
+  
+  setTimeout(() => {
+    document.addEventListener('click', closeMenuHandler);
+  }, 100);
+  
+  document.body.appendChild(menu);
+}
+
+function closeAllActionsMenus() {
+  document.querySelectorAll('.actions-menu').forEach(menu => menu.remove());
+}
+
+function handleDeleteAction(action, gasto) {
+  console.log('🎯 handleDeleteAction llamado con:', { action, gasto });
+  console.log('📋 Registro seleccionado:', {
+    id: gasto.id,
+    fecha: gasto.fecha,
+    descripcion: gasto.descripcion,
+    categoria: gasto.categoria,
+    cantidad: gasto.cantidad
+  });
+  
+  switch(action) {
+    case 'eliminar-este':
+      console.log('🗑️ Eliminando este registro ID:', gasto.id);
+      deleteRowById(gasto.id);
+      break;
+    case 'eliminar-desde-hasta':
+      console.log('📅 Abriendo diálogo eliminar desde y hasta para registro:', gasto.id);
+      showDeleteRangeDialog(gasto);
+      break;
+    case 'eliminar-todos-siguientes':
+      console.log('⏭️ Abriendo diálogo eliminar todos los siguientes para registro:', gasto.id);
+      showDeleteRangeDialog(gasto);
+      break;
+    case 'eliminar-todos':
+      console.log('🧹 Iniciando eliminación de todos los registros');
+      console.log('📊 Total registros antes de eliminar:', gastos.length);
+      
+      const confirmMessage = `⚠️ ¿Estás seguro de que quieres eliminar TODOS los ${gastos.length} registros?\n\n` +
+        `Esta acción eliminará permanentemente todos los datos de:\n` +
+        `• Ingresos y gastos\n` +
+        `• Todas las fechas y categorías\n` +
+        `• Todo el historial financiero\n\n` +
+        `Esta acción no se puede deshacer.`;
+      
+      if (confirm(confirmMessage)) {
+        console.log('✅ Usuario confirmó eliminación total');
+        
+        // Guardar snapshot antes de eliminar
+        saveRecoverySnapshot("delete-all");
+        
+        // Eliminar todos los registros
+        const deletedCount = gastos.length;
+        gastos.length = 0;
+        
+        console.log('🗑️ Registros eliminados:', deletedCount);
+        
+        // Guardar y actualizar todos los componentes
+        console.log('💾 Guardando datos y actualizando componentes...');
+        
+        // 1. Guardar en localStorage/Firebase
+        saveData();
+        console.log('✅ Datos guardados');
+        
+        // 2. Actualizar tabla principal
+        render();
+        console.log('✅ Tabla actualizada');
+        
+        // 3. Actualizar almanaque
+        renderAlmanaque();
+        console.log('✅ Almanaque actualizado');
+        
+        // 4. Actualizar dashboard si existe
+        if (typeof updateDashboard === 'function') {
+          updateDashboard();
+          console.log('✅ Dashboard actualizado');
+        } else {
+          console.log('ℹ️ Dashboard no disponible para actualizar');
+        }
+        
+        // 5. Actualizar totales si existen
+        if (typeof updateTotals === 'function') {
+          updateTotals();
+          console.log('✅ Totales actualizados');
+        }
+        
+        console.log('📊 Total registros después de eliminar:', gastos.length);
+        alert(`✅ Todos los ${deletedCount} registros han sido eliminados correctamente`);
+      } else {
+        console.log('❌ Usuario canceló eliminación total');
+      }
+      break;
+    case 'gastos-mensual':
+      showDateRangeDialog('gastos', 'mensual', gasto);
+      break;
+    case 'gastos-anual':
+      showDateRangeDialog('gastos', 'anual', gasto);
+      break;
+    case 'ingresos-mensual':
+      showDateRangeDialog('ingresos', 'mensual', gasto);
+      break;
+    case 'ingresos-anual':
+      showDateRangeDialog('ingresos', 'anual', gasto);
+      break;
+    case 'gastos-diario':
+      showDateRangeDialog('gastos', 'diario-hasta', gasto);
+      break;
+    case 'ingresos-diario':
+      showDateRangeDialog('ingresos', 'diario-hasta', gasto);
+      break;
+    case 'gastos-anual-hasta':
+      showDateRangeDialog('gastos', 'anual-hasta', gasto);
+      break;
+    case 'ingresos-anual-hasta':
+      showDateRangeDialog('ingresos', 'anual-hasta', gasto);
+      break;
+    case 'editar':
+      startEditingRecord(gasto);
+      break;
+  }
+}
+
+/* =========================================================
+   🔴 1. AUTOCOMPLETAR MODAL CON LA FILA SELECCIONADA
+   ========================================================= */
+
+function showDeleteRangeDialog(referenceGasto = null) {
+  const modal = document.createElement("div");
+  modal.className = 'date-range-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 10000;
+    min-width: 400px;
+    max-width: 500px;
+    padding: 20px;
+  `;
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h2>Eliminar desde y hasta</h2>
+      <button class="modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Fecha y hora de inicio:</label>
+        <input type="date" id="startDate" class="form-input" value="${referenceGasto?.fecha ? referenceGasto.fecha.slice(0, 10) : ''}" required>
+      </div>
+      <div class="form-group">
+        <label>Fecha y hora de fin:</label>
+        <input type="date" id="endDate" class="form-input" value="" required>
+      </div>
+      <div class="form-group">
+        <label>Tipo:</label>
+        <input type="text" id="filterTipo" class="form-input" value="${referenceGasto?.tipo || ''}">
+      </div>
+      <div class="form-group">
+        <label>Nombre:</label>
+        <input type="text" id="filterNombre" class="form-input" value="${referenceGasto?.nombre || ''}">
+      </div>
+      <div class="form-group">
+        <label>Categoría:</label>
+        <input type="text" id="filterCategory" class="form-input" value="${referenceGasto?.categoria || ''}">
+      </div>
+      <div class="form-group">
+        <label>Descripción:</label>
+        <input type="text" id="filterDescription" class="form-input" value="${referenceGasto?.descripcion || ''}">
+      </div>
+      <div class="form-group">
+        <label>Precio/Total:</label>
+        <input type="text" id="filterMonto" class="form-input" value="${referenceGasto?.cantidad || ''}">
+      </div>
+      <div class="alert-warning">
+        <strong>⚠️ Advertencia:</strong> Esta acción eliminará permanentemente los registros seleccionados
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancelBtn">Cancelar</button>
+      <button class="btn btn-danger" id="confirmDelete">Eliminar Registros</button>
+    </div>
+  `;
+
+  // Añadir backdrop
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+  `;
+
+  document.body.appendChild(backdrop);
+  document.body.appendChild(modal);
+
+  // Event listeners
+  const closeHandler = () => {
+    modal.remove();
+    backdrop.remove();
+  };
+
+  modal.querySelector('.modal-close').addEventListener('click', closeHandler);
+  modal.querySelector('#cancelBtn').addEventListener('click', closeHandler);
+
+  modal.querySelector("#confirmDelete").onclick = () => {
+    executeDeleteRange(modal, referenceGasto);
+  };
+
+  backdrop.addEventListener('click', closeHandler);
+  modal.addEventListener('click', (e) => e.stopPropagation());
+}
+
+/* =========================================================
+   🔴 2. FUNCIÓN toISO (OBLIGATORIA)
+   ========================================================= */
+
+function toISO(fechaStr) {
+  if (!fechaStr) return null;
+
+  if (fechaStr.includes("/")) {
+    const [d, m, y] = fechaStr.split("/");
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+
+  return fechaStr.slice(0, 10);
+}
+
+// 🔴 CORRECCIÓN 2: Función para extender rango hasta último día del mes
+function extenderRangoHastaFinMes(fechaStr) {
+  if (!fechaStr) return null;
+  
+  const iso = toISO(fechaStr);
+  if (!iso) return null;
+  
+  const [year, month] = iso.split('-');
+  
+  // Obtener último día del mes
+  const ultimoDia = new Date(parseInt(year), parseInt(month), 0).getDate();
+  
+  return `${year}-${month.padStart(2, "0")}-${ultimoDia.toString().padStart(2, "0")}`;
+}
+
+/* =========================================================
+   🔴 3. ELIMINACIÓN BLINDADA (TIPO BANCO)
+   ========================================================= */
+
+function executeDeleteRange(modal, referenceGasto) {
+  const startStr = toISO(modal.querySelector('#startDate').value);
+  const endStr = extenderRangoHastaFinMes(modal.querySelector('#endDate').value); // 🔴 CORRECCIÓN 2
+
+  if (!startStr) {
+    alert("Fecha inicial obligatoria");
+    return;
+  }
+
+  if (endStr && startStr > endStr) {
+    alert("Rango inválido");
+    return;
+  }
+
+  console.log('🔍 Rango corregido:');
+  console.log('  startStr:', startStr);
+  console.log('  endStr (extendido):', endStr);
+
+  const tipo = modal.querySelector('#filterTipo').value.toLowerCase().trim();
+  const nombre = modal.querySelector('#filterNombre').value.toLowerCase().trim();
+  const categoria = modal.querySelector('#filterCategory').value.toLowerCase().trim();
+  const descripcion = modal.querySelector('#filterDescription').value.toLowerCase().trim();
+  const monto = modal.querySelector('#filterMonto').value.trim();
+
+  const originalLength = gastos.length;
+
+  gastos = gastos.filter(g => {
+
+    if (!g.fecha) return true;
+
+    const fecha = g.fecha.slice(0, 10);
+
+    const enRango = endStr
+      ? (fecha >= startStr && fecha <= endStr)
+      : (fecha >= startStr);
+
+    // 🔴 MATCH EXACTO (IDENTIDAD TOTAL)
+    const coincide =
+      (!tipo || g.tipo?.toLowerCase() === tipo) &&
+      (!nombre || g.nombre?.toLowerCase() === nombre) &&
+      (!categoria || g.categoria?.toLowerCase() === categoria) &&
+      (!descripcion || g.descripcion?.toLowerCase() === descripcion) &&
+      (!monto || String(g.cantidad) === monto);
+
+    const eliminar = enRango && coincide;
+
+    return !eliminar;
+  });
+
+  const deleted = originalLength - gastos.length;
+
+  alert(`Eliminados ${deleted} registros`);
+
+  saveData();
+  render();
+  renderAlmanaque(); // 🔴 CORRECCIÓN 1: Actualizar almanaque en ambas fechas
+}
+
+// 🔴 4. BLOQUEO TOTAL DE ELIMINACIÓN AL EDITAR (CRÍTICO)
+// ========================================================= */
+
+// La función commitChange ya está correctamente implementada sin render()
+// Verificada en línea 5414-5426
+
+function getDialogTitle(type, period) {
+  const typeText = type === 'gastos' ? 'Gastos' : 'Ingresos';
+  
+  switch(period) {
+    case 'mensual': return `💰 ${typeText} Mensuales`;
+    case 'anual': return `📆 ${typeText} Anuales`;
+    case 'diario-hasta': return `📅 ${typeText} cada día hasta`;
+    case 'anual-hasta': return `🗓️ ${typeText} cada año hasta`;
+    default: return `📊 ${typeText}`;
+  }
+}
+
+function getEndDate(period, referenceDate) {
+  const futureDate = new Date(referenceDate);
+  
+  switch(period) {
+    case 'mensual':
+      futureDate.setMonth(futureDate.getMonth() + 12); // 1 año
+      break;
+    case 'anual':
+      futureDate.setFullYear(futureDate.getFullYear() + 5); // 5 años
+      break;
+    case 'diario-hasta':
+      futureDate.setDate(futureDate.getDate() + 30); // 30 días
+      break;
+    case 'anual-hasta':
+      futureDate.setFullYear(futureDate.getFullYear() + 10); // 10 años
+      break;
+    default:
+      futureDate.setMonth(futureDate.getMonth() + 12);
+  }
+  
+  return futureDate;
+}
+
+function getFrequencyLabel(period) {
+  switch(period) {
+    case 'mensual': return 'Día del mes';
+    case 'anual': return 'Mes del año';
+    case 'diario-hasta': return 'Cantidad por día';
+    case 'anual-hasta': return 'Cantidad por año';
+    default: return 'Cantidad';
+  }
+}
+
+function getFrequencyField(period, referenceDate) {
+  const nameField = `
+    <div class="form-group">
+      <label>Nombre:</label>
+      <input type="text" id="recordName" class="form-input" value="${referenceDate.nombre || ''}" placeholder="Nombre del registro">
+    </div>
+  `;
+  
+  switch(period) {
+    case 'mensual':
+      return `
+        ${nameField}
+        <div class="form-group">
+          <label>Día del mes:</label>
+          <input type="number" id="dayOfMonth" class="form-input" value="${referenceDate.getDate()}" min="1" max="31">
+          <small>Se generará un registro cada mes en este día</small>
+        </div>
+      `;
+    case 'anual':
+      return `
+        ${nameField}
+        <div class="form-group">
+          <label>Mes del año:</label>
+          <input type="number" id="monthOfYear" class="form-input" value="${referenceDate.getMonth() + 1}" min="1" max="12">
+          <small>Se generará un registro cada año en este mes</small>
+        </div>
+      `;
+    case 'diario-hasta':
+      return `
+        ${nameField}
+        <div class="form-group">
+          <label>Cantidad por día:</label>
+          <input type="number" id="recordAmount" class="form-input" value="${referenceDate.cantidad || 0}" step="0.01" placeholder="0.00">
+          <small>Se generará un registro cada día con esta cantidad</small>
+        </div>
+      `;
+    case 'anual-hasta':
+      return `
+        ${nameField}
+        <div class="form-group">
+          <label>Cantidad por año:</label>
+          <input type="number" id="recordAmount" class="form-input" value="${referenceDate.cantidad || 0}" step="0.01" placeholder="0.00">
+          <small>Se generará un registro cada año con esta cantidad</small>
+        </div>
+      `;
+    default:
+      return `
+        ${nameField}
+        <div class="form-group">
+          <label>Cantidad:</label>
+          <input type="number" id="recordAmount" class="form-input" value="${referenceDate.cantidad || 0}" step="0.01" placeholder="0.00">
+        </div>
+      `;
+  }
+}
+
+function showDateRangeDialog(type, period, referenceGasto) {
+  const modal = document.createElement('div');
+  modal.className = 'date-range-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 10000;
+    min-width: 400px;
+    max-width: 500px;
+  `;
+  
+  const referenceDate = new Date(referenceGasto.fecha);
+  const today = new Date();
+  
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>${getDialogTitle(type, period)}</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Fecha de inicio:</label>
+        <input type="date" id="startDate" class="form-input" value="${referenceDate.toISOString().slice(0, 10)}" required>
+      </div>
+      <div class="form-group">
+        <label>Fecha de fin:</label>
+        <input type="date" id="endDate" class="form-input" value="${getEndDate(period, referenceDate).toISOString().slice(0, 10)}" required>
+      </div>
+      <div class="form-group">
+        <label>Tipo:</label>
+        <select id="recordType" class="form-input">
+          <option value="${type === 'gastos' ? 'Gasto' : 'Ingreso'}">${type === 'gastos' ? 'Gasto' : 'Ingreso'}</option>
+          <option value="${type === 'gastos' ? 'Ingreso' : 'Gasto'}">${type === 'gastos' ? 'Ingreso' : 'Gasto'}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Categoría:</label>
+        <input type="text" id="recordCategory" class="form-input" value="${referenceGasto.categoria || ''}" placeholder="Ej: Comida, Transporte">
+      </div>
+      <div class="form-group">
+        <label>Descripción:</label>
+        <input type="text" id="recordDescription" class="form-input" value="${referenceGasto.descripcion || ''}" placeholder="Descripción del registro">
+      </div>
+      <div class="form-group">
+        <label>Cantidad:</label>
+        <input type="number" id="recordAmount" class="form-input" value="${referenceGasto.cantidad || 0}" step="0.01" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>Frecuencia (${period === 'mensual' ? 'días' : 'meses'}):</label>
+        <input type="number" id="recordFrequency" class="form-input" value="${period === 'mensual' ? 30 : 12}" min="1" max="${period === 'mensual' ? 365 : 12}">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancelBtn">Cancelar</button>
+      <button class="btn btn-primary" id="generateBtn">Generar Registros</button>
+    </div>
+  `;
+  
+  // Añadir backdrop
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+  `;
+  
+  // Event listeners
+  modal.querySelector('.modal-close').addEventListener('click', () => {
+    modal.remove();
+    backdrop.remove();
+  });
+  
+  modal.querySelector('#cancelBtn').addEventListener('click', () => {
+    modal.remove();
+    backdrop.remove();
+  });
+  
+  modal.querySelector('#generateBtn').addEventListener('click', () => {
+    const baseValues = {
+      tipo: type === 'gastos' ? 'Gasto' : 'Ingreso',
+      nombre: referenceGasto.nombre,
+      descripcion: referenceGasto.descripcion,
+      categoria: referenceGasto.categoria,
+      cantidad: referenceGasto.cantidad,
+      fecha: referenceGasto.fecha // 🔴 CORRECCIÓN: Agregar fecha para ingresos
+    };
+    
+    console.log('🎯 Generando registros con:', { type, period, baseValues });
+    
+    switch(period) {
+      case 'mensual':
+        generateMonthlyUntilRecords(modal, baseValues);
+        break;
+      case 'anual':
+        generateDateRangeRecords(modal);
+        break;
+      case 'diario-hasta':
+        generateDailyUntilRecords(modal, baseValues);
+        break;
+      case 'anual-hasta':
+        generateYearlyUntilRecords(modal, baseValues);
+        break;
+      default:
+        console.warn('Período no reconocido:', period);
+        generateDateRangeRecords(modal);
+    }
+    
+    // 🔴 CORRECCIÓN 1: Cierre automático del modal y actualización inmediata
+    saveData();
+    render();
+    renderAlmanaque();
+    
+    // Cerrar modal automáticamente
+    setTimeout(() => {
+      modal.remove();
+      backdrop.remove();
+    }, 200);
+  });
+  
+  backdrop.addEventListener('click', () => {
+    modal.remove();
+    backdrop.remove();
+  });
+  
+  document.body.appendChild(backdrop);
+  document.body.appendChild(modal);
+}
+
+function generateDateRangeRecords(modal) {
+  const startDate = new Date(modal.querySelector('#startDate').value);
+  const endDate = new Date(modal.querySelector('#endDate').value);
+  const recordType = modal.querySelector('#recordType').value;
+  const recordCategory = modal.querySelector('#recordCategory').value;
+  const recordDescription = modal.querySelector('#recordDescription').value;
+  const recordAmount = parseFloat(modal.querySelector('#recordAmount').value) || 0;
+  const recordFrequency = parseInt(modal.querySelector('#recordFrequency').value) || 30;
+  
+  if (!startDate || !endDate || startDate >= endDate) {
+    alert('Por favor, selecciona un rango de fechas válido');
+    return;
+  }
+  
+  if (!recordCategory) {
+    alert('Por favor, ingresa una categoría');
+    return;
+  }
+  
+  const records = [];
+  let currentDate = new Date(startDate);
+  
+  while (currentDate <= endDate) {
+    const record = {
+      id: createUniqueId(),
+      fecha: formatLocalDate(currentDate),
+      tipo: recordType,
+      categoria: recordCategory,
+      descripcion: recordDescription || `${recordType} - ${recordCategory}`,
+      cantidad: recordAmount
+    };
+    
+    records.push(record);
+    
+    // Avanzar a la siguiente fecha según la frecuencia
+    currentDate = new Date(currentDate);
+    currentDate.setDate(currentDate.getDate() + recordFrequency);
+  }
+  
+  // Agregar registros al array gastos
+  gastos.push(...records);
+  
+  // Guardar y renderizar
+  saveData();
+  render();
+  renderAlmanaque();
+  
+  // Cerrar modal
+  document.querySelector('.modal-backdrop').remove();
+  modal.remove();
+  
+  // Mostrar confirmación
+  alert(`✅ Se generaron ${records.length} registros de ${recordType} desde ${startDate.toLocaleDateString()} hasta ${endDate.toLocaleDateString()}`);
+  
+  console.log(`📊 Generados ${records.length} registros:`, records);
 }
 
 function createEditableCell(gasto, col, rowIndex, colIndex, totalRows, totalCols) {
@@ -2563,10 +5428,15 @@ function createEditableCell(gasto, col, rowIndex, colIndex, totalRows, totalCols
   const commitChange = () => {
     const raw = td.textContent.trim();
     const parsedValue = parseValue(raw, col.type);
+
     if (gasto[col.key] === parsedValue) return;
+
     saveRecoverySnapshot("edit-cell");
-    gasto[col.key] = parseValue(raw, col.type);
-    render();
+    gasto[col.key] = parsedValue;
+
+    saveData();
+
+    // NO render()
   };
 
   td.addEventListener("blur", () => {
@@ -2612,6 +5482,8 @@ form.addEventListener("submit", event => {
 
   if (!requiredName || isNaN(amount) || amount <= 0) {
     showFormFeedback("Completa al menos el nombre y una cantidad mayor que 0.", "warning");
+    pendingAddMode = "single";
+    updateAddActionOptions();
     return;
   }
 
@@ -2628,7 +5500,13 @@ form.addEventListener("submit", event => {
     editingRowId = null;
     buildFormFields();
   } else {
-    addRow(values);
+    const result = addRowsFromMode(values, pendingAddMode || "single");
+    if (!result.added) {
+      showFormFeedback("Ese movimiento ya existe en ese periodo y no se volvió a agregar.", "warning");
+      pendingAddMode = "single";
+      updateAddActionOptions();
+      return;
+    }
   }
 
   render();
@@ -2670,31 +5548,177 @@ if (btnRestore) {
   btnRestore.addEventListener("click", restoreLastSnapshot);
 }
 
+// Función para cargar datos desde Firebase al iniciar la app
+async function cargarDatosDesdeFirebase() {
+  try {
+    // Verificar si Firebase está disponible
+    if (typeof window.obtenerGastosDesdeFirebase !== 'function') {
+      console.log("🔥 Firebase no disponible, usando localStorage");
+      return false;
+    }
 
-loadSettings();
-loadData();
-loadRecoverySnapshot();
-if (!recoverySnapshot) {
-  saveRecoverySnapshot("initial-load");
-}
-syncCustomColumnsWithSettings();
-
-buildFormFields();
-refreshDateFilterOptions();
-
-// Apply stored theme/background settings
-if (dashboardTheme) {
-  dashboardTheme.value = settings.theme || "blue";
-}
-applyTheme(settings.theme);
-if (backgroundUrlInput && settings.backgroundImage) {
-  if (settings.backgroundImage.startsWith("http") || settings.backgroundImage.startsWith("data:")) {
-    backgroundUrlInput.value = settings.backgroundImage;
+    console.log("🔥 Verificando datos en Firebase...");
+    
+    // Obtener gastos desde Firebase
+    const gastosFirebase = await window.obtenerGastosDesdeFirebase();
+    
+    if (gastosFirebase && gastosFirebase.length > 0) {
+      console.log(`✅ Se encontraron ${gastosFirebase.length} gastos en Firebase`);
+      
+      // Solo usar datos de Firebase si hay más que los locales
+      if (gastosFirebase.length > gastos.length) {
+        console.log("🔄 Usando datos de Firebase (más recientes/complete)");
+        
+        // Convertir datos de Firebase al formato de la app
+        const gastosConvertidos = gastosFirebase.map(gasto => {
+          // Eliminar campos específicos de Firebase
+          const { id, firebaseTimestamp, userId, sincronizado, ...gastoLimpio } = gasto;
+          
+          // Asegurar que tenga todos los campos necesarios
+          return {
+            ...gastoLimpio,
+            id: gastoLimpio.id || id, // Usar el ID de Firebase si no tiene ID local
+            firebaseId: id // Guardar referencia al ID de Firebase
+          };
+        });
+        
+        // Reemplazar datos locales
+        gastos.length = 0; // Limpiar array actual
+        gastos.push(...gastosConvertidos); // Cargar datos de Firebase
+        
+        // Guardar en localStorage como respaldo
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(gastos));
+          console.log("💾 Datos de Firebase respaldados en localStorage");
+        } catch (error) {
+          console.warn("⚠️ No se pudo respaldar en localStorage:", error);
+        }
+        return true; // Indicar que se usaron datos de Firebase
+      } else {
+        console.log("📂 Manteniendo datos locales (más recientes/complete)");
+        return false; // Indicar que se mantienen datos locales
+      }
+    } else {
+      console.log("📂 No hay datos en Firebase, usando localStorage");
+      return false;
+    }
+  } catch (error) {
+    console.error("❌ Error cargando datos desde Firebase:", error);
+    console.log("📂 Continuando con datos locales");
+    return false;
   }
 }
 
-if (dashboardDate) {
-  dashboardDate.value = new Date().toISOString().slice(0, 10);
+// FUNCIONES DEL SIDEBAR
+function initializeSidebar() {
+  // Configurar event listeners para los botones del sidebar
+  if (sidebarBtnRegistro) {
+    sidebarBtnRegistro.addEventListener("click", () => showPanel("entriesPanel"));
+  }
+  
+  if (sidebarBtnAlmanaque) {
+    sidebarBtnAlmanaque.addEventListener("click", () => showPanel("almanaquePanelSection"));
+  }
+  
+  if (sidebarBtnDashboard) {
+    sidebarBtnDashboard.addEventListener("click", () => showPanel("dashboardPanel"));
+  }
+  
+  // Actualizar tema actual en el sidebar
+  updateSidebarTheme();
+}
+
+function showPanel(panelId) {
+  // Ocultar todos los paneles
+  const panels = ["entriesPanel", "almanaquePanelSection", "dashboardPanel"];
+  panels.forEach(id => {
+    const panel = document.getElementById(id);
+    if (panel) {
+      panel.style.display = "none";
+    }
+  });
+  
+  // Mostrar solo el panel seleccionado
+  const selectedPanel = document.getElementById(panelId);
+  if (selectedPanel) {
+    selectedPanel.style.display = "block";
+  }
+  
+  // Actualizar estado de los botones del sidebar
+  updateSidebarButtons(panelId);
+  
+  // Actualizar panel activo
+  currentActivePanel = panelId;
+  
+  console.log(`🔄 Panel cambiado a: ${panelId}`);
+}
+
+function updateSidebarButtons(activePanelId) {
+  const buttons = [
+    { id: "sidebarBtnRegistro", panel: "entriesPanel" },
+    { id: "sidebarBtnAlmanaque", panel: "almanaquePanelSection" },
+    { id: "sidebarBtnDashboard", panel: "dashboardPanel" }
+  ];
+  
+  buttons.forEach(({ id, panel }) => {
+    const button = document.getElementById(id);
+    if (button) {
+      if (panel === activePanelId) {
+        button.classList.add("active");
+      } else {
+        button.classList.remove("active");
+      }
+    }
+  });
+}
+
+function updateSidebarTheme() {
+  if (sidebarCurrentTheme) {
+    sidebarCurrentTheme.textContent = currentTheme.charAt(0).toUpperCase() + currentTheme.slice(1);
+  }
+}
+
+// Función para inicializar el sidebar al cargar la app
+function setupSidebarNavigation() {
+  // Mostrar solo el panel inicial (Registro)
+  showPanel("entriesPanel");
+  
+  // Inicializar los event listeners
+  initializeSidebar();
+}
+
+async function initializeApp() {
+  await initializePersistence();
+
+  // TEMPORALMENTE DESACTIVADO - Firebase está vacío y borra datos locales
+  // await cargarDatosDesdeFirebase();
+  console.log("📂 Carga desde Firebase desactivada (usando solo localStorage)");
+
+  if (!recoverySnapshot) {
+    saveRecoverySnapshot("initial-load");
+  }
+  syncCustomColumnsWithSettings();
+
+  buildFormFields();
+  refreshDateFilterOptions();
+
+  if (dashboardTheme) {
+    dashboardTheme.value = settings.theme || "natural";
+  }
+  applyTheme(settings.theme);
+
+  if (dashboardDate) {
+    dashboardDate.value = new Date().toISOString().slice(0, 10);
+  }
+
+  applyTheme(currentTheme);
+  populateAlmanaqueSelectors();
+  renderAlmanaque();
+  render();
+  initializeDesktopShell();
+  
+  // Inicializar navegación del sidebar
+  setupSidebarNavigation();
 }
 
 if (dashboardPeriod) {
@@ -2727,7 +5751,7 @@ if (headerThemeSelect) {
 
 if (resetThemeBtn) {
   resetThemeBtn.addEventListener("click", () => {
-    const defaultTheme = "blue";
+    const defaultTheme = "natural";
     settings.theme = defaultTheme;
     saveSettings();
     applyTheme(defaultTheme);
@@ -2737,58 +5761,10 @@ if (resetThemeBtn) {
 
 if (headerResetTheme) {
   headerResetTheme.addEventListener("click", () => {
-    const defaultTheme = "blue";
+    const defaultTheme = "natural";
     settings.theme = defaultTheme;
     saveSettings();
     applyTheme(defaultTheme);
-  });
-}
-
-if (backgroundUrlApply && backgroundUrlInput) {
-  const applyBackgroundUrl = () => {
-    const url = backgroundUrlInput.value.trim();
-    if (!url) return;
-    settings.backgroundImage = url;
-    saveSettings();
-    applyBackground();
-  };
-
-  backgroundUrlApply.addEventListener("click", applyBackgroundUrl);
-
-  backgroundUrlInput.addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      applyBackgroundUrl();
-    }
-  });
-
-  backgroundUrlInput.addEventListener("input", () => {
-    // No preview: only update URL field, actual background applies on click "Aplicar".
-  });
-}
-
-if (backgroundFileBtn && backgroundFileInput) {
-  backgroundFileBtn.addEventListener("click", () => backgroundFileInput.click());
-  backgroundFileInput.addEventListener("change", event => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      settings.backgroundImage = dataUrl;
-      saveSettings();
-      applyBackground();
-    };
-    reader.readAsDataURL(file);
-    event.target.value = "";
-  });
-}
-
-if (backgroundClear) {
-  backgroundClear.addEventListener("click", () => {
-    settings.backgroundImage = "";
-    saveSettings();
-    applyBackground();
   });
 }
 
@@ -2904,12 +5880,16 @@ if (clearFiltersBtn) {
   });
 }
 
+if (almanaqueTypeFilter) {
+  almanaqueTypeFilter.addEventListener("change", renderAlmanaque);
+}
+
 if (btnExport) {
   btnExport.addEventListener("click", exportData);
 }
 
 if (btnImport && importFile) {
-  btnImport.addEventListener("click", () => importFile.click());
+  btnImport.addEventListener("click", () => showImportMenu());
   importFile.addEventListener("change", async event => {
     const files = Array.from(event.target.files || []);
     if (files.length) await importData(files);
@@ -2933,7 +5913,16 @@ if (toggleAlmanaque) {
 }
 
 if (btnExportAlmanaque) {
-  btnExportAlmanaque.addEventListener("click", exportAlmanaqueSummary);
+  btnExportAlmanaque.addEventListener("click", showAlmanaqueExportMenu);
+}
+
+if (btnImportAlmanaque && importAlmanaqueFile) {
+  btnImportAlmanaque.addEventListener("click", () => showAlmanaqueImportMenu());
+  importAlmanaqueFile.addEventListener("change", async event => {
+    const files = Array.from(event.target.files || []);
+    if (files.length) await importData(files);
+    event.target.value = "";
+  });
 }
 
 if (clearDayViewBtn) {
@@ -3002,7 +5991,14 @@ if (almanaqueAttachmentType && almanaqueAttachmentFile) {
         categoria: record.categoria || attachmentType,
         fecha: record.fecha || selectedDateTime,
       }));
-      records.forEach(record => gastos.push(record));
+      records.forEach(record => {
+        gastos.push(record);
+        
+        // Sincronizar cada registro importado con Firebase
+        if (typeof window.guardarGastoEnFirebase === 'function') {
+          window.guardarGastoEnFirebase(record);
+        }
+      });
     }
 
     saveData();
@@ -3097,9 +6093,24 @@ if (almanaqueViewMode) {
   almanaqueViewMode.addEventListener("change", renderAlmanaque);
 }
 
-applyTheme(currentTheme);
-populateAlmanaqueSelectors();
-renderAlmanaque();
+initializeApp().catch(error => {
+  console.error("No se pudo iniciar la app correctamente.", error);
+  persistenceBlocked = true;
+  buildFormFields();
+  refreshDateFilterOptions();
+  applyTheme(currentTheme);
+  populateAlmanaqueSelectors();
+  renderAlmanaque();
+  render();
+  initializeDesktopShell();
+});
 
-render();
-initializeDesktopShell();
+// LIMPIEZA DE DATOS EXISTENTES (EJECUTAR UNA VEZ)
+gastos.forEach(g => {
+  if (g.fecha && g.fecha.length === 10) {
+    g.fecha = g.fecha + "T00:00";
+  }
+});
+
+console.log("🔧 Sistema de eliminación por identidad activado");
+console.log("📋 Ahora puedes eliminar registros específicos por categoría o descripción dentro de un rango");

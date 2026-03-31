@@ -2,6 +2,8 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("desktopApp", {
   getMeta: () => ipcRenderer.invoke("desktop:get-meta"),
+  loadStore: () => ipcRenderer.invoke("storage:load"),
+  saveStore: payload => ipcRenderer.invoke("storage:save", payload),
   createDesktopShortcut: () => ipcRenderer.invoke("desktop:create-shortcut"),
   checkForUpdates: () => ipcRenderer.invoke("updater:check"),
   downloadUpdate: () => ipcRenderer.invoke("updater:download"),

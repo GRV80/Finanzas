@@ -2,11 +2,325 @@ const path = require("path");
 const fs = require("fs");
 const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const { NsisUpdater } = require("electron-updater");
+const initSqlJs = require("sql.js/dist/sql-wasm.js");
 
 let mainWindow = null;
 let updater = null;
 let updatesReady = false;
 let reloadTimer = null;
+
+const DB_FILE = "app-data.sqlite";
+const DB_BACKUP_FILE = "app-data.backup.sqlite";
+const LEGACY_STORE_FILE = "app-data.json";
+const LEGACY_STORE_BACKUP_FILE = "app-data.backup.json";
+
+let sqlJsPromise = null;
+
+function getStorePaths() {
+  const storageDir = path.join(app.getPath("userData"), "storage");
+  return {
+    storageDir,
+    dbPath: path.join(storageDir, DB_FILE),
+    dbBackupPath: path.join(storageDir, DB_BACKUP_FILE),
+    dbTempPath: path.join(storageDir, `${DB_FILE}.tmp`),
+    legacyStorePath: path.join(storageDir, LEGACY_STORE_FILE),
+    legacyBackupPath: path.join(storageDir, LEGACY_STORE_BACKUP_FILE),
+  };
+}
+
+function ensureStoreDir() {
+  const { storageDir } = getStorePaths();
+  fs.mkdirSync(storageDir, { recursive: true });
+}
+
+function readJsonFile(filePath) {
+  if (!fs.existsSync(filePath)) return null;
+  const raw = fs.readFileSync(filePath, "utf8");
+  if (!raw.trim()) return null;
+  return JSON.parse(raw);
+}
+
+function getSqlJs() {
+  if (!sqlJsPromise) {
+    sqlJsPromise = initSqlJs({
+      locateFile: file => path.join(app.getAppPath(), "node_modules", "sql.js", "dist", file),
+    });
+  }
+
+  return sqlJsPromise;
+}
+
+function validatePersistedState(value) {
+  if (!value || typeof value !== "object") {
+    return {
+      records: [],
+      settings: null,
+      recoverySnapshot: null,
+    };
+  }
+
+  return {
+    records: Array.isArray(value.records) ? value.records : [],
+    settings: value.settings && typeof value.settings === "object" ? value.settings : null,
+    recoverySnapshot:
+      value.recoverySnapshot &&
+      typeof value.recoverySnapshot === "object" &&
+      Array.isArray(value.recoverySnapshot.records)
+        ? value.recoverySnapshot
+        : null,
+  };
+}
+
+function ensureDatabaseSchema(db) {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS records (
+      row_order INTEGER NOT NULL,
+      id TEXT PRIMARY KEY,
+      tipo TEXT,
+      fecha TEXT,
+      nombre TEXT,
+      categoria TEXT,
+      descripcion TEXT,
+      cantidad REAL,
+      attachments_json TEXT NOT NULL,
+      record_json TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS metadata (
+      key TEXT PRIMARY KEY,
+      value_json TEXT NOT NULL
+    );
+  `);
+}
+
+async function openDatabase(filePath) {
+  const SQL = await getSqlJs();
+  const buffer = fs.existsSync(filePath) ? fs.readFileSync(filePath) : null;
+  const db = buffer ? new SQL.Database(buffer) : new SQL.Database();
+  ensureDatabaseSchema(db);
+  return db;
+}
+
+function readMetadataValue(db, key) {
+  const stmt = db.prepare("SELECT value_json FROM metadata WHERE key = ?");
+  try {
+    stmt.bind([key]);
+    if (!stmt.step()) return null;
+    return JSON.parse(stmt.getAsObject().value_json);
+  } finally {
+    stmt.free();
+  }
+}
+
+function readStateFromDatabase(db) {
+  const recordRows = db.exec("SELECT record_json FROM records ORDER BY row_order ASC");
+  const records =
+    recordRows[0]?.values?.map(([rawRecord]) => {
+      try {
+        return JSON.parse(rawRecord);
+      } catch {
+        return null;
+      }
+    }).filter(Boolean) || [];
+
+  return validatePersistedState({
+    records,
+    settings: readMetadataValue(db, "settings"),
+    recoverySnapshot: readMetadataValue(db, "recoverySnapshot"),
+  });
+}
+
+function exportDatabase(db) {
+  return Buffer.from(db.export());
+}
+
+function writeDatabaseToDisk(db, filePath) {
+  const { dbTempPath } = getStorePaths();
+  fs.writeFileSync(dbTempPath, exportDatabase(db));
+  fs.renameSync(dbTempPath, filePath);
+}
+
+function writeStateToDatabase(db, payload) {
+  const sanitized = validatePersistedState(payload);
+  db.run("BEGIN TRANSACTION");
+
+  try {
+    db.run("DELETE FROM records");
+    db.run("DELETE FROM metadata WHERE key IN ('settings', 'recoverySnapshot')");
+
+    const insertRecord = db.prepare(`
+      INSERT INTO records (
+        row_order,
+        id,
+        tipo,
+        fecha,
+        nombre,
+        categoria,
+        descripcion,
+        cantidad,
+        attachments_json,
+        record_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    sanitized.records.forEach((record, index) => {
+      const attachments = Array.isArray(record.attachments) ? record.attachments : [];
+      insertRecord.run([
+        index,
+        String(record.id ?? `${Date.now()}-${index}`),
+        record.tipo ?? null,
+        record.fecha ?? null,
+        record.nombre ?? null,
+        record.categoria ?? null,
+        record.descripcion ?? null,
+        record.cantidad == null ? null : Number(record.cantidad),
+        JSON.stringify(attachments),
+        JSON.stringify(record),
+      ]);
+    });
+    insertRecord.free();
+
+    const upsertMetadata = db.prepare(`
+      INSERT INTO metadata (key, value_json)
+      VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json
+    `);
+
+    if (sanitized.settings) {
+      upsertMetadata.run(["settings", JSON.stringify(sanitized.settings)]);
+    }
+
+    if (sanitized.recoverySnapshot) {
+      upsertMetadata.run(["recoverySnapshot", JSON.stringify(sanitized.recoverySnapshot)]);
+    }
+
+    upsertMetadata.free();
+    db.run("COMMIT");
+    return sanitized;
+  } catch (error) {
+    db.run("ROLLBACK");
+    throw error;
+  }
+}
+
+async function migrateLegacyJsonToDatabase(sourcePath, targetPath) {
+  const legacyState = validatePersistedState(readJsonFile(sourcePath));
+  const db = await openDatabase(targetPath);
+
+  try {
+    writeStateToDatabase(db, legacyState);
+    writeDatabaseToDisk(db, targetPath);
+  } finally {
+    db.close();
+  }
+
+  return legacyState;
+}
+
+async function loadPersistedState() {
+  ensureStoreDir();
+  const { dbPath, dbBackupPath, legacyStorePath, legacyBackupPath } = getStorePaths();
+
+  try {
+    if (fs.existsSync(dbPath)) {
+      const db = await openDatabase(dbPath);
+      try {
+        return {
+          ok: true,
+          data: readStateFromDatabase(db),
+          source: "file",
+          recoveredFromBackup: false,
+          storage: "sqlite",
+        };
+      } finally {
+        db.close();
+      }
+    }
+
+    if (fs.existsSync(legacyStorePath)) {
+      const migratedState = await migrateLegacyJsonToDatabase(legacyStorePath, dbPath);
+      return {
+        ok: true,
+        data: migratedState,
+        source: "file",
+        recoveredFromBackup: false,
+        storage: "sqlite",
+        message: "Datos migrados automaticamente desde el almacenamiento anterior.",
+      };
+    }
+
+    return {
+      ok: true,
+      data: validatePersistedState(null),
+      source: "empty",
+      recoveredFromBackup: false,
+      storage: "sqlite",
+    };
+  } catch (error) {
+    try {
+      if (fs.existsSync(dbBackupPath)) {
+        const backupDb = await openDatabase(dbBackupPath);
+        try {
+          return {
+            ok: true,
+            data: readStateFromDatabase(backupDb),
+            source: "backup",
+            recoveredFromBackup: true,
+            storage: "sqlite",
+            message: "Se recuperaron los datos desde la copia de seguridad SQLite.",
+          };
+        } finally {
+          backupDb.close();
+        }
+      }
+
+      if (fs.existsSync(legacyBackupPath)) {
+        const migratedBackupState = await migrateLegacyJsonToDatabase(legacyBackupPath, dbPath);
+        return {
+          ok: true,
+          data: migratedBackupState,
+          source: "backup",
+          recoveredFromBackup: true,
+          storage: "sqlite",
+          message: "Se recuperaron datos desde la copia JSON heredada y se migraron a SQLite.",
+        };
+      }
+
+      throw error;
+    } catch {
+      return {
+        ok: false,
+        message: error.message,
+      };
+    }
+  }
+}
+
+async function savePersistedState(payload) {
+  ensureStoreDir();
+  const { dbPath, dbBackupPath } = getStorePaths();
+  const db = await openDatabase(dbPath);
+
+  try {
+    const sanitized = writeStateToDatabase(db, payload);
+
+    if (fs.existsSync(dbPath)) {
+      fs.copyFileSync(dbPath, dbBackupPath);
+    }
+
+    writeDatabaseToDisk(db, dbPath);
+
+    return {
+      ok: true,
+      path: dbPath,
+      backupPath: dbBackupPath,
+      storage: "sqlite",
+      recordsCount: sanitized.records.length,
+    };
+  } finally {
+    db.close();
+  }
+}
 
 function sendUpdaterEvent(type, payload = {}) {
   if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -32,24 +346,26 @@ function createUpdater() {
       })
     : new NsisUpdater();
 
-  instance.autoDownload = false;
-  instance.autoInstallOnAppQuit = true;
+  // 🔴 MASTER AI: Configuración mejorada de actualización automática
+  instance.autoDownload = true; // Descargar automáticamente
+  instance.autoInstallOnAppQuit = true; // Instalar al cerrar
 
   instance.on("checking-for-update", () => {
-    sendUpdaterEvent("checking", { message: "Buscando actualizaciones..." });
+    sendUpdaterEvent("checking", { message: "🔍 Buscando actualizaciones..." });
   });
 
   instance.on("update-available", info => {
     sendUpdaterEvent("available", {
       version: info.version,
-      message: `Nueva version disponible: ${info.version}`,
+      message: `🚀 Nueva versión disponible: ${info.version}`,
+      releaseNotes: info.releaseNotes || "Mejoras y correcciones de errores."
     });
   });
 
   instance.on("update-not-available", info => {
     sendUpdaterEvent("not-available", {
       version: info.version,
-      message: "Ya tienes la ultima version instalada.",
+      message: "✅ Ya tienes la última versión instalada.",
     });
   });
 
@@ -57,20 +373,33 @@ function createUpdater() {
     sendUpdaterEvent("download-progress", {
       percent: progress.percent || 0,
       bytesPerSecond: progress.bytesPerSecond || 0,
-      message: `Descargando actualizacion... ${Math.round(progress.percent || 0)}%`,
+      total: progress.total || 0,
+      transferred: progress.transferred || 0,
+      message: `⬇️ Descargando actualización... ${Math.round(progress.percent || 0)}%`,
     });
   });
 
   instance.on("update-downloaded", info => {
     sendUpdaterEvent("downloaded", {
       version: info.version,
-      message: "Actualizacion descargada. Puedes reiniciar e instalar.",
+      message: `✅ Actualización ${info.version} descargada. La app se reiniciará automáticamente.`,
+      autoInstall: true
     });
+    
+    // 🔴 MASTER AI: Instalación automática después de descargar
+    setTimeout(() => {
+      if (updater && updatesReady) {
+        sendUpdaterEvent("installing", {
+          message: "🔄 Instalando actualización automáticamente..."
+        });
+        setImmediate(() => updater.quitAndInstall(false, true));
+      }
+    }, 3000);
   });
 
   instance.on("error", error => {
     sendUpdaterEvent("error", {
-      message: error == null ? "Error desconocido en el actualizador." : error.message,
+      message: error == null ? "❌ Error desconocido en el actualizador." : `❌ ${error.message}`,
     });
   });
 
@@ -117,11 +446,21 @@ function createWindow() {
     });
 
     if (updatesReady && updater) {
+      // 🔴 MASTER AI: Verificación inmediata al iniciar
       setTimeout(() => {
         updater.checkForUpdates().catch(error => {
           sendUpdaterEvent("error", { message: error.message });
         });
       }, 2500);
+      
+      // 🔴 MASTER AI: Verificación automática cada 30 minutos
+      setInterval(() => {
+        if (updater && !mainWindow.isDestroyed()) {
+          updater.checkForUpdates().catch(error => {
+            console.log("Error en verificación automática:", error.message);
+          });
+        }
+      }, 30 * 60 * 1000); // 30 minutos
     }
   });
 }
@@ -148,6 +487,19 @@ ipcMain.handle("desktop:get-meta", () => ({
   isPackaged: app.isPackaged,
   updatesEnabled: updatesReady,
 }));
+
+ipcMain.handle("storage:load", () => loadPersistedState());
+
+ipcMain.handle("storage:save", (_event, payload) => {
+  try {
+    return savePersistedState(payload);
+  } catch (error) {
+    return {
+      ok: false,
+      message: error.message,
+    };
+  }
+});
 
 ipcMain.handle("desktop:create-shortcut", () => {
   if (!app.isPackaged) {
