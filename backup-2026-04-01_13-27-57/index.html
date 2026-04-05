@@ -10,16 +10,8 @@
   <!-- Sidebar Principal -->
   <aside class="sidebar" id="mainSidebar">
     <div class="sidebar-header">
-      <div class="logo-container">
-        <div class="logo">
-          <div class="logo-icon">
-            <img src="img/Blue_Lion_Logo.png" alt="App Gastos Logo" class="logo-img">
-          </div>
-        </div>
-      </div>
-      <div class="sidebar-subtitle">
-        <img src="img/ContaFin_Blue Lion_Logo.png" alt="Control Financiero Profesional" class="nombre-img">
-      </div>
+      <h2 class="sidebar-title">Panel Financiero</h2>
+      <div class="sidebar-subtitle">Control Económico Personal</div>
     </div>
     
     <nav class="sidebar-nav">
@@ -256,13 +248,12 @@
       <table class="almanaque-table">
         <thead>
           <tr>
-            <th>N</th>
             <th>Tipo</th>
             <th>Fecha / Hora</th>
             <th>Nombre</th>
             <th>Categoría</th>
             <th>Descripción</th>
-            <th>Precio/Total</th>
+            <th>Cantidad</th>
             <th>Acción</th>
           </tr>
         </thead>
@@ -280,10 +271,8 @@
     <div class="panel-header">
       <h2>Dashboard</h2>
       <div class="panel-actions">
-        <button type="button" id="btnExportDashboard" title="Exportar resumen en múltiples formatos">📊 Exportar resumen</button>
-        <button type="button" id="btnRefreshDashboard" title="Actualizar datos del dashboard">🔄 Actualizar</button>
-        <button type="button" id="btnFullscreenDashboard" title="Pantalla completa">⛶ Pantalla completa</button>
-        <button type="button" class="panel-toggle" id="toggleDashboard" title="Mostrar/Ocultar dashboard">Ocultar</button>
+        <button type="button" id="btnExportDashboard">Exportar resumen</button>
+        <button type="button" class="panel-toggle" id="toggleDashboard">Ocultar</button>
       </div>
     </div>
     <div class="panel-body" id="dashboardBody">
@@ -321,10 +310,6 @@
           <option value="lowest">Menor movimiento</option>
           <option value="networth">Balance neto del periodo</option>
           <option value="savings_rate">Tasa de ahorro</option>
-          <option value="efficiency">Eficiencia financiera</option>
-          <option value="projection">Proyección mensual</option>
-          <option value="cost_optimization">Optimización de Costes</option>
-          <option value="financial_dashboard">Dashboard Financiero</option>
         </select>
       </label>
 
@@ -352,46 +337,23 @@
     <div class="dashboard-layout">
       <div class="dashboard-left">
         <div class="dashboard-cards">
-          <div class="card income-card">
-            <div class="card-icon">💰</div>
-            <div class="card-content">
-              <div class="card-title">Ingresos</div>
-              <div class="card-value" id="dashboardIncome">0 €</div>
-              <div class="card-trend" id="incomeTrend">+0%</div>
-            </div>
+          <div class="card">
+            <div class="card-title">Ingresos</div>
+            <div class="card-value" id="dashboardIncome">0 €</div>
           </div>
-          <div class="card expense-card">
-            <div class="card-icon">💸</div>
-            <div class="card-content">
-              <div class="card-title">Gastos</div>
-              <div class="card-value" id="dashboardExpense">0 €</div>
-              <div class="card-trend" id="expenseTrend">+0%</div>
-            </div>
+          <div class="card">
+            <div class="card-title">Gastos</div>
+            <div class="card-value" id="dashboardExpense">0 €</div>
           </div>
-          <div class="card balance-card">
-            <div class="card-icon">💎</div>
-            <div class="card-content">
-              <div class="card-title">Saldo</div>
-              <div class="card-value" id="dashboardBalance">0 €</div>
-              <div class="card-trend" id="balanceTrend">+0%</div>
-            </div>
+          <div class="card">
+            <div class="card-title">Saldo</div>
+            <div class="card-value" id="dashboardBalance">0 €</div>
           </div>
-          <div class="card projection-card">
-            <div class="card-icon">📈</div>
-            <div class="card-content">
-              <div class="card-title">Proyección Mensual</div>
-              <div class="card-value" id="dashboardProjection">0 €</div>
-              <div class="card-trend" id="projectionTrend">+0%</div>
-            </div>
-          </div>
-          <div class="card metric-card">
-            <div class="card-icon">📊</div>
-            <div class="card-content">
-              <div class="card-title">Comparativa Temporal</div>
-              <div class="card-value" id="dashboardMetricValue">0</div>
-              <div class="card-trend" id="metricTrend">+0%</div>
-            </div>
-          </div>
+        </div>
+
+        <div class="dashboard-metric-card">
+          <div class="card-title" id="dashboardMetricTitle">Métrica</div>
+          <div class="card-value" id="dashboardMetricValue">0</div>
         </div>
       </div>
 
@@ -401,6 +363,7 @@
         </div>
       </div>
     </div>
+    <button type="button" id="dashboardBackToTop" class="dashboard-back-top" aria-label="Volver arriba">↑</button>
   </section>
   </main>
 

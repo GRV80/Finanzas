@@ -415,15 +415,33 @@ function createWindow() {
     minHeight: 760,
     autoHideMenuBar: true,
     backgroundColor: "#f5f7fa",
+    show: false, // Optimización: mostrar solo cuando esté listo
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      enableRemoteModule: false,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      experimentalFeatures: false,
     },
   });
 
+  // Optimización: cargar y mostrar solo cuando esté listo
   mainWindow.loadFile(path.join(app.getAppPath(), "index.html"));
+  
+  // Mantener zoom simple como la app web
+  mainWindow.webContents.setZoomFactor(1.0);
+  
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    
+    // Optimización: enfocar la ventana al mostrar
+    if (process.platform !== 'darwin') {
+      mainWindow.focus();
+    }
+  });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
@@ -562,27 +580,75 @@ ipcMain.handle("updater:install", () => {
     return { ok: true };
   }
 
-  return {
-    ok: false,
-    message: "Todavia no hay ninguna actualizacion descargada.",
-  };
+  return { ok: false, message: "No hay actualizaciones listas para instalar." };
 });
 
-app.whenReady().then(() => {
-  app.setAppUserModelId("com.usuario.appgastos");
-  updater = createUpdater();
-  createWindow();
-  enableLiveReload();
+// Handlers para zoom
+ipcMain.handle("zoom:set", async (event, factor) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.setZoomFactor(factor);
+    return { ok: true, factor };
+  }
+  return { ok: false, message: "Ventana no disponible" };
+});
 
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
+ipcMain.handle("zoom:get", async () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    const factor = mainWindow.webContents.getZoomFactor();
+    return { ok: true, factor };
+  }
+  return { ok: false, factor: 1.0 };
 });
 
 app.on("window-all-closed", () => {
+  // Liberar memoria cuando todas las ventanas se cierran
   if (process.platform !== "darwin") {
     app.quit();
   }
 });
+
+app.on("before-quit", () => {
+  // Limpiar recursos antes de salir
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.removeAllListeners();
+  }
+  
+  // Liberar referencias
+  mainWindow = null;
+  updater = null;
+  updatesReady = false;
+  
+  if (reloadTimer) {
+    clearTimeout(reloadTimer);
+    reloadTimer = null;
+  }
+});
+
+// Optimización: evitar múltiples instancias
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    // Enfocar la ventana principal si se intenta abrir otra instancia
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+  
+  // Crear ventana principal solo si tenemos el lock
+  app.whenReady().then(() => {
+    app.setAppUserModelId("com.usuario.appgastos");
+    updater = createUpdater();
+    createWindow();
+    enableLiveReload();
+
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      }
+    });
+  });
+}

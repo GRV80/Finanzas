@@ -32,12 +32,6 @@ const dashboardDate = document.getElementById("dashboardDate");
 const dashboardIncome = document.getElementById("dashboardIncome");
 const dashboardExpense = document.getElementById("dashboardExpense");
 const dashboardBalance = document.getElementById("dashboardBalance");
-const dashboardProjection = document.getElementById("dashboardProjection");
-const incomeTrend = document.getElementById("incomeTrend");
-const expenseTrend = document.getElementById("expenseTrend");
-const balanceTrend = document.getElementById("balanceTrend");
-const projectionTrend = document.getElementById("projectionTrend");
-const metricTrend = document.getElementById("metricTrend");
 const dashboardMetric = document.getElementById("dashboardMetric");
 const dashboardMetricTitle = document.getElementById("dashboardMetricTitle");
 const dashboardMetricValue = document.getElementById("dashboardMetricValue");
@@ -89,8 +83,6 @@ const almanaqueTotal = document.getElementById("almanaque-total");
 const toggleAlmanaque = document.getElementById("toggleAlmanaque");
 const btnExportAlmanaque = document.getElementById("btnExportAlmanaque");
 const btnExportDashboard = document.getElementById("btnExportDashboard");
-const btnRefreshDashboard = document.getElementById("btnRefreshDashboard");
-const btnFullscreenDashboard = document.getElementById("btnFullscreenDashboard");
 
 // Variables del Sidebar
 const sidebarBtnRegistro = document.getElementById("sidebarBtnRegistro");
@@ -135,7 +127,6 @@ const categories = [
 const types = ["Gasto", "Ingreso"];
 
 const baseColumns = [
-  { key: "numero", label: "N", type: "number", fixed: true },
   { key: "tipo", label: "Tipo", type: "select", fixed: true },
   { key: "fecha", label: "Fecha / Hora", type: "datetime", fixed: true },
   { key: "nombre", label: "Nombre", type: "text", fixed: true },
@@ -145,7 +136,7 @@ const baseColumns = [
 ];
 
 const columns = baseColumns.map(col => ({ ...col }));
-const almanaqueColumnKeys = ["numero", "tipo", "fecha", "nombre", "categoria", "descripcion", "cantidad"];
+const almanaqueColumnKeys = ["tipo", "fecha", "nombre", "categoria", "descripcion", "cantidad"];
 
 const STORAGE_KEY = "app-gastos_records";
 const SETTINGS_KEY = "app_gastos_settings";
@@ -315,20 +306,6 @@ function saveData() {
   }
 }
 
-// 🔴 FUNCIÓN ROBUSTA PARA RENUMERACIÓN CORRELATIVA CRONOLÓGICA
-function renumerarRegistros() {
-  // Ordenar por fecha para mantener orden cronológico perfecto
-  gastos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-  
-  // Renumerar correlativamente sin repetidos según orden cronológico
-  gastos.forEach((gasto, index) => {
-    gasto.numero = index + 1;
-  });
-  
-  console.log(`🔢 Renumeración cronológica completada: ${gastos.length} registros con números 1-${gastos.length}`);
-  console.log(`📅 Orden: ${gastos[0]?.fecha} → ${gastos[gastos.length-1]?.fecha}`);
-}
-
 function normalizeRecord(record = {}) {
   const normalized = { ...record };
 
@@ -338,13 +315,6 @@ function normalizeRecord(record = {}) {
 
   if (!Array.isArray(normalized.attachments)) {
     normalized.attachments = [];
-  }
-
-  // 🔴 CONTROL NUMÉRICO CORRELATIVO SIN REPETIDOS
-  // NO reasignar número aquí, solo asegurar que tenga valor
-  // La renumeración se hará en las funciones de carga y renderizado
-  if (normalized.numero == null || normalized.numero === "") {
-    normalized.numero = 0; // Se renumerará después
   }
 
   columns.forEach(col => {
@@ -433,9 +403,6 @@ function loadData() {
       const cleaned = cleanupLycamobileDuplicates(parsed);
       mergeCustomColumnsFromRecords(cleaned);
       gastos = cleaned.map(normalizeRecord);
-      
-      // 🔴 RENUMERACIÓN CORRELATIVA SIN REPETIDOS
-      renumerarRegistros();
       
       // Hacer global para Firebase
       window.gastos = gastos;
@@ -2248,12 +2215,6 @@ function getAlmanaqueSummaryData() {
     return String(date.getDate()).padStart(2, "0") === dayValue;
   });
 
-  // 🔴 RENUMERACIÓN CORRELATIVA PARA ALMANAQUE (ASCENDENTE)
-  filtered.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-  filtered.forEach((gasto, index) => {
-    gasto.numero = index + 1;
-  });
-
   const totalIncome = filtered.reduce((sum, g) => sum + (String(g.tipo).toLowerCase() === "ingreso" ? Number(g.cantidad) || 0 : 0), 0);
   const totalExpense = filtered.reduce((sum, g) => sum + (String(g.tipo).toLowerCase() === "gasto" ? Number(g.cantidad) || 0 : 0), 0);
 
@@ -2275,11 +2236,10 @@ function exportAlmanaqueSummary() {
   const summary = getAlmanaqueSummaryData();
   if (!summary) return;
 
-  const header = ["N", "Tipo", "Fecha Hora", "Nombre", "Categoria", "Descripcion", "Cantidad"];
+  const header = ["Tipo", "Fecha Hora", "Nombre", "Categoria", "Descripcion", "Cantidad"];
   const rows = summary.filtered
     .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)))
     .map(record => [
-      record.numero || "",
       record.tipo || "",
       formatValue(record.fecha, "datetime"),
       record.nombre || "",
@@ -2634,18 +2594,7 @@ function renderAlmanaque() {
       const tr = document.createElement("tr");
       almanaqueColumns.forEach(col => {
         const td = document.createElement("td");
-        
-        // 🔴 COLUMNA "N" NO ES EDITABLE en Almanaque
-        if (col.key === "numero") {
-          td.contentEditable = false;
-          td.classList.add("non-editable");
-          td.style.backgroundColor = "#f8f9fa";
-          td.style.fontWeight = "bold";
-          td.style.textAlign = "center";
-          td.style.color = "#2c3e50";
-        }
-        
-        let value = formatValue(record[col.key], col.type, col.key);
+        let value = formatValue(record[col.key], col.type);
         if (col.key === "descripcion" && Array.isArray(record.attachments) && record.attachments.length) {
           value = `${value}${value ? " | " : ""}Adjuntos: ${record.attachments.map(att => att.name).join(", ")}`;
         }
@@ -3000,11 +2949,6 @@ function startEditingRecord(record) {
 function formatValue(value, type, key) {
   if (value == null || value === "" || Number.isNaN(value)) return "";
 
-  // 🔴 CAMPO "N" - CONTROL NUMÉRICO (PRIMERO)
-  if (key === "numero") {
-    return String(Math.floor(Number(value)) || "");
-  }
-
   if (type === "number") {
     return Number(value).toFixed(2);
   }
@@ -3292,10 +3236,6 @@ function getMetricPalette(metric, total = 1) {
     highest: ["rgba(2, 119, 189, 0.78)", "rgba(3, 155, 229, 0.78)", "rgba(79, 195, 247, 0.78)", "rgba(129, 212, 250, 0.78)"],
     lowest: ["rgba(141, 110, 99, 0.78)", "rgba(161, 136, 127, 0.78)", "rgba(188, 170, 164, 0.78)", "rgba(215, 204, 200, 0.9)"],
     savings_rate: ["rgba(56, 142, 60, 0.8)", "rgba(229, 57, 53, 0.8)"],
-    efficiency: ["rgba(46, 125, 50, 0.8)", "rgba(251, 192, 45, 0.8)", "rgba(211, 47, 47, 0.8)"],
-    projection: ["rgba(33, 150, 243, 0.8)", "rgba(156, 39, 176, 0.8)"],
-    cost_optimization: ["rgba(255, 152, 0, 0.8)", "rgba(255, 87, 34, 0.8)", "rgba(244, 67, 54, 0.8)"],
-    financial_dashboard: ["rgba(63, 81, 181, 0.8)", "rgba(103, 58, 183, 0.8)", "rgba(156, 39, 176, 0.8)"],
   };
 
   const fallback = ["rgba(30, 126, 226, 0.75)", "rgba(0, 151, 167, 0.75)", "rgba(245, 124, 0, 0.75)", "rgba(106, 27, 154, 0.75)"];
@@ -3410,10 +3350,6 @@ function getMetricLabel(metric) {
     lowest: "Menor movimiento",
     networth: "Balance neto del periodo",
     savings_rate: "Tasa de ahorro",
-    efficiency: "Eficiencia financiera",
-    projection: "Proyección mensual",
-    cost_optimization: "Optimización de Costes",
-    financial_dashboard: "Dashboard Financiero",
   };
   return metricLabels[metric] || metricLabels.balance;
 }
@@ -3537,19 +3473,9 @@ function updateDashboard() {
 
   const balance = totalIncome - totalExpense;
 
-  // Actualizar tarjetas principales
-  dashboardIncome.textContent = totalIncome.toFixed(2) + " €";
-  dashboardExpense.textContent = totalExpense.toFixed(2) + " €";
-  dashboardBalance.textContent = balance.toFixed(2) + " €";
-  
-  // Calcular y actualizar proyección mensual
-  const projectionMultiplier = period === "day" ? 30 : period === "month" ? 1 : 12;
-  const projectedBalance = balance * projectionMultiplier;
-  dashboardProjection.textContent = projectedBalance.toFixed(2) + " €";
-  
-  // Calcular tendencias (comparación con período anterior)
-  const previousPeriodData = getPreviousPeriodData(period, dashboardDate);
-  updateTrends(totalIncome, totalExpense, balance, previousPeriodData);
+  dashboardIncome.textContent = totalIncome.toFixed(2);
+  dashboardExpense.textContent = totalExpense.toFixed(2);
+  dashboardBalance.textContent = balance.toFixed(2);
 
   const byCategory = {};
   const categoryStats = {};
@@ -3657,41 +3583,6 @@ function updateDashboard() {
     const savingsRate = Math.max(Math.min(rawSavingsRate, 100), -100);
     labels = ["Ahorro %", "Gasto %"];
     values = [savingsRate, Math.max(0, Math.min(100, (totalExpense / Math.max(totalIncome, 1)) * 100))];
-  } else if (metric === "efficiency") {
-    // Eficiencia financiera: (Ingresos - Gastos) / Ingresos * 100
-    const efficiency = totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome) * 100 : 0;
-    const efficiencyLevel = efficiency >= 80 ? 'Excelente' : efficiency >= 50 ? 'Buena' : efficiency >= 20 ? 'Regular' : 'Mejorar';
-    labels = ["Eficiencia %", "Meta 80%"];
-    values = [Math.max(0, Math.min(100, efficiency)), 80];
-  } else if (metric === "projection") {
-    // Proyección mensual basada en el período actual
-    const projectionMultiplier = period === "day" ? 30 : period === "month" ? 1 : 12;
-    const projectedIncome = totalIncome * projectionMultiplier;
-    const projectedExpense = totalExpense * projectionMultiplier;
-    const projectedBalance = balance * projectionMultiplier;
-    labels = ["Ingresos Proyectados", "Gastos Proyectados", "Balance Proyectado"];
-    values = [projectedIncome, projectedExpense, projectedBalance];
-  } else if (metric === "cost_optimization") {
-    // Optimización de Costes - análisis de gastos por categoría
-    const gastosPorCategoria = {};
-    filtered.filter(g => g.tipo === 'gasto').forEach(g => {
-      if (!gastosPorCategoria[g.categoria]) gastosPorCategoria[g.categoria] = 0;
-      gastosPorCategoria[g.categoria] += Number(g.cantidad) || 0;
-    });
-    
-    const sortedCategories = Object.entries(gastosPorCategoria)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8);
-    
-    labels = sortedCategories.map(([cat]) => cat);
-    values = sortedCategories.map(([, amount]) => amount);
-  } else if (metric === "financial_dashboard") {
-    // Dashboard Financiero - resumen completo
-    labels = ["Ingresos", "Gastos", "Ahorro", "Inversiones"];
-    const ahorro = Math.max(0, balance);
-    const inversiones = filtered.filter(g => g.categoria === 'Inversiones' || g.categoria === 'Inversion')
-      .reduce((sum, g) => sum + (Number(g.cantidad) || 0), 0);
-    values = [totalIncome, totalExpense, ahorro, inversiones];
   } else {
     const sourceEntries = Object.entries(metric === "average" ? categoryStats : byCategory)
       .map(([key, value]) => [
@@ -3731,20 +3622,6 @@ function updateDashboard() {
     metricTotal = balance;
   } else if (metric === "savings_rate") {
     metricTotal = totalIncome > 0 ? (balance / totalIncome) * 100 : 0;
-  } else if (metric === "efficiency") {
-    metricTotal = totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome) * 100 : 0;
-  } else if (metric === "projection") {
-    const projectionMultiplier = period === "day" ? 30 : period === "month" ? 1 : 12;
-    metricTotal = balance * projectionMultiplier;
-  } else if (metric === "cost_optimization") {
-    const totalGastos = filtered.filter(g => g.tipo === 'gasto')
-      .reduce((sum, g) => sum + (Number(g.cantidad) || 0), 0);
-    metricTotal = totalGastos;
-  } else if (metric === "financial_dashboard") {
-    const ahorro = Math.max(0, balance);
-    const inversiones = filtered.filter(g => g.categoria === 'Inversiones' || g.categoria === 'Inversion')
-      .reduce((sum, g) => sum + (Number(g.cantidad) || 0), 0);
-    metricTotal = ahorro + inversiones;
   }
 
   if (dashboardMetricTitle) dashboardMetricTitle.textContent = getMetricLabel(metric);
@@ -3754,14 +3631,6 @@ function updateDashboard() {
         ? String(metricTotal)
         : metric === "savings_rate"
           ? `${metricTotal.toFixed(2)} %`
-        : metric === "efficiency"
-          ? `${metricTotal.toFixed(1)} %`
-        : metric === "projection"
-          ? `${metricTotal.toFixed(2)} €`
-        : metric === "cost_optimization"
-          ? `${metricTotal.toFixed(2)} €`
-        : metric === "financial_dashboard"
-          ? `${metricTotal.toFixed(2)} €`
           : `${metricTotal.toFixed(2)} €`;
     dashboardMetricValue.textContent = metricText;
   }
@@ -4069,9 +3938,6 @@ function addRow(values = {}, options = {}) {
 
   gastos.push(normalizeRecord(row));
   
-  // 🔴 RENUMERACIÓN CORRELATIVA AL AGREGAR NUEVO REGISTRO
-  renumerarRegistros();
-  
   // Sincronizar con Firebase (sin afectar la lógica actual)
   if (typeof window.guardarGastoEnFirebase === 'function') {
     const nuevoGasto = normalizeRecord(row);
@@ -4248,224 +4114,6 @@ function deleteDebtRecords() {
   
   return { added: 0, skipped: deletedCount };
 }
-
-/* =========================================================
-   🔴 FIX REAL MODAL PROFESIONAL
-   ========================================================= */
-
-(function () {
-  // 🔴 1. CSS INYECTADO (NO DEPENDE DE TU CSS)
-  const style = document.createElement("style");
-  style.innerHTML = `
-    
-    .actions-menu {
-      position: fixed !important;
-      top: 50% !important;
-      left: 50% !important;
-      transform: translate(-50%, -50%) !important;
-
-      background: #ffffff !important;
-      border-radius: 12px !important;
-      padding: 16px !important;
-      min-width: 320px !important;
-
-      box-shadow: 0 20px 50px rgba(0,0,0,0.3) !important;
-      z-index: 10000 !important;
-    }
-
-    .modal-overlay-fix {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.45);
-      z-index: 9999;
-    }
-
-  `;
-  document.head.appendChild(style);
-
-  // 🔴 2. OBSERVAR CUANDO APARECE EL MENÚ (EL "MODAL" REAL)
-  const observer = new MutationObserver(() => {
-    const menu = document.querySelector(".actions-menu");
-
-    if (!menu || menu.dataset.fixed) return;
-
-    menu.dataset.fixed = "true";
-
-    console.log("✅ MODAL CORREGIDO");
-
-    // 🔴 3. CREAR OVERLAY
-    let overlay = document.querySelector(".modal-overlay-fix");
-
-    if (!overlay) {
-      overlay = document.createElement("div");
-      overlay.className = "modal-overlay-fix";
-      document.body.appendChild(overlay);
-    }
-
-    // 🔴 4. FORZAR CENTRADO
-    menu.style.top = "50%";
-    menu.style.left = "50%";
-    menu.style.transform = "translate(-50%, -50%)";
-
-    // 🔴 5. CERRAR AL HACER CLICK FUERA
-    overlay.onclick = () => {
-      menu.remove();
-      overlay.remove();
-    };
-
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-
-})();
-
-/* =========================================================
-   🔥 MODAL PRO NIVEL BANCO (COMPLETO)
-   ========================================================= */
-
-(function () {
-  // 🎨 1. ESTILOS PRO (animación + botón cerrar + drag cursor)
-  const style = document.createElement("style");
-  style.innerHTML = `
-    
-    .actions-menu {
-      position: fixed !important;
-      top: 50% !important;
-      left: 50% !important;
-      transform: translate(-50%, -50%) scale(0.95) !important;
-
-      background: #ffffff !important;
-      border-radius: 14px !important;
-      padding: 18px !important;
-      min-width: 340px !important;
-
-      box-shadow: 0 25px 60px rgba(0,0,0,0.35) !important;
-      z-index: 10000 !important;
-
-      animation: modalFadeIn 0.2s ease forwards;
-    }
-
-    @keyframes modalFadeIn {
-      from {
-        opacity: 0;
-        transform: translate(-50%, -60%) scale(0.9);
-      }
-      to {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-      }
-    }
-
-    .modal-overlay-fix {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.45);
-      backdrop-filter: blur(2px);
-      z-index: 9999;
-    }
-
-    .modal-close-btn {
-      position: absolute;
-      top: 10px;
-      right: 12px;
-      cursor: pointer;
-      font-size: 18px;
-      color: #666;
-      transition: 0.2s;
-    }
-
-    .modal-close-btn:hover {
-      color: #000;
-      transform: scale(1.2);
-    }
-
-    .modal-header-drag {
-      cursor: move;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-
-  `;
-  document.head.appendChild(style);
-
-  // 🔍 2. OBSERVER PARA DETECTAR EL MODAL REAL
-  const observer = new MutationObserver(() => {
-    const modal = document.querySelector(".actions-menu");
-
-    if (!modal || modal.dataset.pro) return;
-
-    modal.dataset.pro = "true";
-
-    console.log("🚀 MODAL PRO ACTIVADO");
-
-    // 🔴 3. OVERLAY
-    let overlay = document.querySelector(".modal-overlay-fix");
-
-    if (!overlay) {
-      overlay = document.createElement("div");
-      overlay.className = "modal-overlay-fix";
-      document.body.appendChild(overlay);
-    }
-
-    // 🔴 4. BOTÓN CERRAR
-    const closeBtn = document.createElement("div");
-    closeBtn.innerHTML = "✕";
-    closeBtn.className = "modal-close-btn";
-    modal.appendChild(closeBtn);
-
-    const closeModal = () => {
-      modal.remove();
-      overlay.remove();
-    };
-
-    closeBtn.onclick = closeModal;
-    overlay.onclick = closeModal;
-
-    // 🔴 5. DRAG REAL (tipo ventana Windows)
-    let isDragging = false;
-    let offsetX = 0;
-    let offsetY = 0;
-
-    modal.addEventListener("mousedown", (e) => {
-      if (e.offsetY < 40) {
-        isDragging = true;
-
-        const rect = modal.getBoundingClientRect();
-        offsetX = e.clientX - rect.left;
-        offsetY = e.clientY - rect.top;
-
-        modal.style.transform = "none";
-      }
-    });
-
-    document.addEventListener("mousemove", (e) => {
-      if (!isDragging) return;
-
-      modal.style.left = (e.clientX - offsetX) + "px";
-      modal.style.top = (e.clientY - offsetY) + "px";
-    });
-
-    document.addEventListener("mouseup", () => {
-      isDragging = false;
-    });
-
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-
-})();
 
 function showMonthlyUntilDialog(values) {
   const modal = document.createElement('div');
@@ -5042,30 +4690,27 @@ function showDeleteActionsMenu(event, gasto) {
       </button>
     </div>
     <div class="actions-menu-section">
-      <div class="actions-menu-title">💸 GASTOS</div>
+      <div class="actions-menu-title">Generación de Registros</div>
       <button class="actions-menu-item" data-action="gastos-mensual">
         <span>💰</span> Gastos Mensual
       </button>
       <button class="actions-menu-item" data-action="gastos-anual">
         <span>📆</span> Gastos Anual
       </button>
-      <button class="actions-menu-item" data-action="gastos-diario">
-        <span>📅</span> Gastos cada día hasta
-      </button>
-      <button class="actions-menu-item" data-action="gastos-anual-hasta">
-        <span>🗓️</span> Gastos cada año hasta
-      </button>
-    </div>
-    <div class="actions-menu-section">
-      <div class="actions-menu-title">💰 INGRESOS</div>
       <button class="actions-menu-item" data-action="ingresos-mensual">
         <span>📈</span> Ingresos Mensual
       </button>
       <button class="actions-menu-item" data-action="ingresos-anual">
         <span>📊</span> Ingresos Anual
       </button>
+      <button class="actions-menu-item" data-action="gastos-diario">
+        <span>📅</span> Gastos cada día hasta
+      </button>
       <button class="actions-menu-item" data-action="ingresos-diario">
         <span>📈</span> Ingresos cada día hasta
+      </button>
+      <button class="actions-menu-item" data-action="gastos-anual-hasta">
+        <span>🗓️</span> Gastos cada año hasta
       </button>
       <button class="actions-menu-item" data-action="ingresos-anual-hasta">
         <span>📊</span> Ingresos cada año hasta
@@ -6056,41 +5701,19 @@ function parseFechaSegura(raw) {
 
 function createEditableCell(gasto, col, rowIndex, colIndex, totalRows, totalCols) {
   const td = document.createElement("td");
-  
-  // 🔴 COLUMNA "N" NO ES EDITABLE (control automático)
-  if (col.key === "numero") {
-    td.contentEditable = false;
-    td.classList.add("non-editable");
-    td.style.backgroundColor = "#f8f9fa";
-    td.style.fontWeight = "bold";
-    td.style.textAlign = "center";
-    td.style.color = "#2c3e50";
-  } else {
-    td.contentEditable = true;
-    td.classList.add("editable");
-    if (col.type === "datetime") {
-      td.classList.add("datetime-cell");
-    }
+  td.contentEditable = true;
+  td.classList.add("editable");
+  if (col.type === "datetime") {
+    td.classList.add("datetime-cell");
   }
-  
   td.tabIndex = 0;
 
-  // 🔴 COLUMNA "N" - MOSTRAR ÍNDICE CORRELATIVO VISUAL
-  if (col.key === "numero") {
-    td.textContent = rowIndex + 1;
-  } else {
-    td.textContent = formatValue(gasto[col.key], col.type, col.key);
-  }
+  td.textContent = formatValue(gasto[col.key], col.type);
 
   const isLastRow = rowIndex === totalRows - 1;
   const isLastCol = colIndex === totalCols - 1;
 
   const commitChange = () => {
-    // 🔴 NO PERMITIR EDICIÓN EN COLUMNA "N"
-    if (col.key === "numero") {
-      return;
-    }
-    
     const raw = td.textContent.trim();
     let parsedValue;
 
@@ -6473,492 +6096,6 @@ if (btnExportDashboard) {
   btnExportDashboard.addEventListener("click", exportDashboardSummary);
 }
 
-// Función para obtener datos del período anterior
-function getPreviousPeriodData(currentPeriod, currentDateInput) {
-  if (!currentDateInput || !currentDateInput.value) return null;
-  
-  const currentDate = new Date(currentDateInput.value);
-  let previousDate = new Date(currentDate);
-  
-  switch (currentPeriod) {
-    case "day":
-      previousDate.setDate(previousDate.getDate() - 1);
-      break;
-    case "month":
-      previousDate.setMonth(previousDate.getMonth() - 1);
-      break;
-    case "year":
-      previousDate.setFullYear(previousDate.getFullYear() - 1);
-      break;
-  }
-  
-  // Filtrar datos del período anterior
-  const previousFiltered = getFilteredEntriesForPeriod(previousDate, currentPeriod);
-  
-  const prevIncome = previousFiltered.reduce((sum, g) => {
-    return sum + (String(g.tipo).toLowerCase() === "ingreso" ? Number(g.cantidad) || 0 : 0);
-  }, 0);
-  
-  const prevExpense = previousFiltered.reduce((sum, g) => {
-    return sum + (String(g.tipo).toLowerCase() === "gasto" ? Number(g.cantidad) || 0 : 0);
-  }, 0);
-  
-  return {
-    income: prevIncome,
-    expense: prevExpense,
-    balance: prevIncome - prevExpense
-  };
-}
-
-// Función para actualizar las tendencias
-function updateTrends(currentIncome, currentExpense, currentBalance, previousData) {
-  if (!previousData) {
-    // Si no hay datos anteriores, mostrar tendencia neutra
-    updateTrendElement(incomeTrend, 0);
-    updateTrendElement(expenseTrend, 0);
-    updateTrendElement(balanceTrend, 0);
-    updateTrendElement(projectionTrend, 0);
-    updateTrendElement(metricTrend, 0);
-    return;
-  }
-  
-  // Calcular porcentajes de cambio
-  const incomeChange = previousData.income > 0 ? ((currentIncome - previousData.income) / previousData.income) * 100 : 0;
-  const expenseChange = previousData.expense > 0 ? ((currentExpense - previousData.expense) / previousData.expense) * 100 : 0;
-  const balanceChange = previousData.balance !== 0 ? ((currentBalance - previousData.balance) / Math.abs(previousData.balance)) * 100 : 0;
-  
-  // Actualizar elementos de tendencia
-  updateTrendElement(incomeTrend, incomeChange);
-  updateTrendElement(expenseTrend, expenseChange);
-  updateTrendElement(balanceTrend, balanceChange);
-  updateTrendElement(projectionTrend, balanceChange); // La proyección sigue la tendencia del balance
-  updateTrendElement(metricTrend, balanceChange); // La métrica también sigue la tendencia del balance
-}
-
-// Función para actualizar un elemento de tendencia
-function updateTrendElement(element, change) {
-  if (!element) return;
-  
-  const sign = change >= 0 ? '+' : '';
-  const text = `${sign}${change.toFixed(1)}%`;
-  
-  element.textContent = text;
-  
-  // Eliminar clases de tendencia existentes
-  element.classList.remove('trend-positive', 'trend-negative', 'trend-neutral');
-  
-  // Agregar clase según el cambio
-  if (Math.abs(change) < 0.1) {
-    element.classList.add('trend-neutral');
-  } else if (change >= 0) {
-    element.classList.add('trend-positive');
-  } else {
-    element.classList.add('trend-negative');
-  }
-}
-
-// Función para obtener entradas filtradas para un período específico
-function getFilteredEntriesForPeriod(date, period) {
-  let startDate = new Date(date);
-  let endDate = new Date(date);
-  
-  switch (period) {
-    case "day":
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
-      break;
-    case "month":
-      startDate.setDate(1);
-      endDate.setMonth(endDate.getMonth() + 1);
-      endDate.setDate(0);
-      break;
-    case "year":
-      startDate.setMonth(0, 1);
-      endDate.setMonth(11, 31);
-      break;
-  }
-  
-  return gastos.filter(g => {
-    const gastoDate = new Date(g.fecha);
-    return gastoDate >= startDate && gastoDate <= endDate;
-  });
-}
-
-// Función de notificación simple
-function showNotification(message, type = "info") {
-  const notification = document.createElement('div');
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 20px;
-    border-radius: 8px;
-    color: white;
-    font-weight: 500;
-    z-index: 10000;
-    opacity: 0;
-    transform: translateX(100%);
-    transition: all 0.3s ease;
-    max-width: 300px;
-  `;
-  
-  // Colores según tipo
-  const colors = {
-    success: '#4caf50',
-    error: '#f44336',
-    warning: '#ff9800',
-    info: '#2196f3'
-  };
-  
-  notification.style.background = colors[type] || colors.info;
-  notification.textContent = message;
-  
-  document.body.appendChild(notification);
-  
-  // Animación de entrada
-  setTimeout(() => {
-    notification.style.opacity = '1';
-    notification.style.transform = 'translateX(0)';
-  }, 100);
-  
-  // Remover después de 3 segundos
-  setTimeout(() => {
-    notification.style.opacity = '0';
-    notification.style.transform = 'translateX(100%)';
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 300);
-  }, 3000);
-}
-
-if (btnRefreshDashboard) {
-  btnRefreshDashboard.addEventListener("click", () => {
-    // Refrescar datos del dashboard
-    updateDashboard();
-    // Mostrar notificación de actualización
-    showNotification("Dashboard actualizado", "success");
-  });
-}
-
-if (btnFullscreenDashboard) {
-  btnFullscreenDashboard.addEventListener("click", () => {
-    const dashboardPanel = document.getElementById("dashboardPanel");
-    if (!dashboardPanel) return;
-    
-    if (!document.fullscreenElement) {
-      // Entrar en pantalla completa
-      dashboardPanel.requestFullscreen().then(() => {
-        // Estilos para pantalla completa
-        dashboardPanel.style.cssText = `
-          background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-          padding: 20px;
-          border-radius: 0;
-          width: 100vw;
-          height: 100vh;
-          display: flex;
-          flex-direction: column;
-          box-sizing: border-box;
-        `;
-        
-        // Ajustar el layout para pantalla completa
-        const dashboardLayout = dashboardPanel.querySelector('.dashboard-layout');
-        if (dashboardLayout) {
-          dashboardLayout.style.cssText = `
-            height: calc(100vh - 180px);
-            gap: 24px;
-            padding: 0 24px;
-          `;
-        }
-        
-        // Ajustar el panel de controles
-        const dashboardBody = dashboardPanel.querySelector('.panel-body');
-        if (dashboardBody) {
-          dashboardBody.style.cssText = `
-            flex: 1;
-            overflow: hidden;
-          `;
-        }
-        
-        btnFullscreenDashboard.textContent = "🗕 Salir pantalla completa";
-        btnFullscreenDashboard.title = "Salir de pantalla completa";
-        showNotification("Modo pantalla completa activado", "success");
-        
-        // Forzar redibujado del gráfico
-        setTimeout(() => {
-          if (typeof updateDashboard === 'function') {
-            updateDashboard();
-          }
-        }, 100);
-        
-      }).catch(err => {
-        console.error("Error al entrar en pantalla completa:", err);
-        showNotification("No se pudo activar pantalla completa", "error");
-      });
-    } else {
-      // Salir de pantalla completa
-      document.exitFullscreen().then(() => {
-        // Restaurar estilos originales
-        dashboardPanel.style.cssText = '';
-        
-        // Restaurar layout original
-        const dashboardLayout = dashboardPanel.querySelector('.dashboard-layout');
-        if (dashboardLayout) {
-          dashboardLayout.style.cssText = '';
-        }
-        
-        // Restaurar panel de controles
-        const dashboardBody = dashboardPanel.querySelector('.panel-body');
-        if (dashboardBody) {
-          dashboardBody.style.cssText = '';
-        }
-        
-        btnFullscreenDashboard.textContent = "⛶ Pantalla completa";
-        btnFullscreenDashboard.title = "Pantalla completa";
-        showNotification("Modo pantalla completa desactivado", "info");
-        
-        // Forzar redibujado del gráfico
-        setTimeout(() => {
-          if (typeof updateDashboard === 'function') {
-            updateDashboard();
-          }
-        }, 100);
-        
-      }).catch(err => {
-        console.error("Error al salir de pantalla completa:", err);
-      });
-    }
-  });
-}
-
-// Atajos de teclado globales
-document.addEventListener("keydown", (e) => {
-  // Control + Z: Deshacer
-  if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-    e.preventDefault();
-    if (typeof undo === "function") {
-      undo();
-    }
-  }
-  
-  // Control + Y o Control + Shift + Z: Rehacer
-  if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
-    e.preventDefault();
-    if (typeof redo === "function") {
-      redo();
-    }
-  }
-  
-  // Control + S: Guardar
-  if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-    e.preventDefault();
-    if (typeof saveToStorage === "function") {
-      saveToStorage();
-    }
-  }
-  
-  // Control + F: Buscar
-  if ((e.ctrlKey || e.metaKey) && e.key === "f") {
-    e.preventDefault();
-    if (searchInput) {
-      searchInput.focus();
-      searchInput.select();
-    }
-  }
-  
-  // Control + N: Nuevo registro
-  if ((e.ctrlKey || e.metaKey) && e.key === "n") {
-    e.preventDefault();
-    if (typeof addEntry === "function") {
-      addEntry();
-    }
-  }
-  
-  // Control + Plus: Aumentar tamaño de letra
-  if ((e.ctrlKey || e.metaKey) && (e.key === "+" || e.key === "=" || e.key === "Add")) {
-    e.preventDefault();
-    changeFontSize(1);
-  }
-  
-  // Control + Minus: Disminuir tamaño de letra
-  if ((e.ctrlKey || e.metaKey) && (e.key === "-" || e.key === "Subtract")) {
-    e.preventDefault();
-    changeFontSize(-1);
-  }
-  
-  // Control + 0: Restablecer tamaño de letra
-  if ((e.ctrlKey || e.metaKey) && (e.key === "0" || e.key === "Numpad0")) {
-    e.preventDefault();
-    resetFontSize();
-  }
-  
-  // Control + Rueda del mouse: Alternativa para zoom
-  if (e.ctrlKey || e.metaKey) {
-    if (e.deltaY !== undefined) {
-      if (e.deltaY < 0) {
-        e.preventDefault();
-        changeFontSize(1);
-      } else if (e.deltaY > 0) {
-        e.preventDefault();
-        changeFontSize(-1);
-      }
-    }
-  }
-  
-  // Escape: Cerrar modales o cancelar
-  if (e.key === "Escape") {
-    e.preventDefault();
-    // Cerrar cualquier modal o panel abierto
-    const panels = document.querySelectorAll('.panel.active');
-    panels.forEach(panel => {
-      if (typeof panel.classList !== 'undefined') {
-        panel.classList.remove('active');
-      }
-    });
-  }
-});
-
-// Cargar tamaño de fuente guardado al iniciar
-document.addEventListener('DOMContentLoaded', () => {
-  const savedFontSize = localStorage.getItem('fontSize');
-  if (savedFontSize) {
-    document.documentElement.style.setProperty('font-size', savedFontSize + 'px', 'important');
-    document.body.style.fontSize = savedFontSize + 'px';
-  }
-  
-  // Detectar si estamos en Electron y configurar zoom adicional
-  if (window.desktopApp) {
-    // Escuchar eventos de zoom desde el main process
-    window.desktopApp.onZoomChanged((zoomFactor) => {
-      // Ajustar el font-size basado en el factor de zoom
-      const baseSize = 16;
-      const newSize = Math.round(baseSize * zoomFactor);
-      const clampedSize = Math.max(12, Math.min(24, newSize));
-      
-      document.documentElement.style.setProperty('font-size', clampedSize + 'px', 'important');
-      document.body.style.fontSize = clampedSize + 'px';
-      
-      // Guardar el tamaño preferido
-      localStorage.setItem('fontSize', clampedSize);
-      
-      // Mostrar notificación
-      showNotification(`🔍 Zoom: ${clampedSize}px (${Math.round(zoomFactor * 100)}%)`, 'success');
-    });
-  }
-});
-
-// Event listener específico para la rueda del mouse
-document.addEventListener('wheel', (e) => {
-  if (e.ctrlKey || e.metaKey) {
-    e.preventDefault();
-    if (e.deltaY < 0) {
-      changeFontSize(1);
-    } else if (e.deltaY > 0) {
-      changeFontSize(-1);
-    }
-  }
-}, { passive: false });
-
-// Función para cambiar el tamaño de fuente
-function changeFontSize(delta) {
-  const root = document.documentElement;
-  const currentSize = parseFloat(getComputedStyle(root).fontSize) || 16;
-  const newSize = Math.max(12, Math.min(24, currentSize + delta));
-  
-  // Aplicar a todo el documento con mayor fuerza
-  root.style.fontSize = newSize + 'px';
-  root.style.setProperty('font-size', newSize + 'px', 'important');
-  
-  // Aplicar al body
-  document.body.style.fontSize = newSize + 'px';
-  document.body.style.setProperty('font-size', newSize + 'px', 'important');
-  
-  // Si estamos en Electron, también ajustar el zoom de la ventana
-  if (window.desktopApp) {
-    const zoomFactor = newSize / 16;
-    window.desktopApp.setZoomFactor(zoomFactor).catch(() => {
-      // Si falla, continuar con el zoom de fuente normal
-    });
-  }
-  
-  // Aplicar a todos los elementos principales
-  const elementsToUpdate = [
-    '.panel-header', '.panel-body', '.sidebar', '.main-content', 
-    'table', 'button', 'input', 'select', 'textarea', '.card', 
-    '.dashboard-card', '.btn', '.form-control', 'th', 'td',
-    '.sidebar-title', '.sidebar-subtitle', '.card-title', '.card-value'
-  ];
-  
-  elementsToUpdate.forEach(selector => {
-    const elements = document.querySelectorAll(selector);
-    elements.forEach(el => {
-      el.style.fontSize = '';
-      el.style.setProperty('font-size', 'inherit', 'important');
-    });
-  });
-  
-  // Guardar preferencia
-  localStorage.setItem('fontSize', newSize);
-  
-  // Mostrar notificación más visible
-  showNotification(`🔍 Zoom: ${Math.round(newSize)}px`, 'success');
-  
-  // Forzar reflow
-  void document.body.offsetHeight;
-}
-
-// Función para restablecer el tamaño de fuente
-function resetFontSize() {
-  const root = document.documentElement;
-  const defaultSize = 16;
-  
-  root.style.fontSize = defaultSize + 'px';
-  root.style.setProperty('font-size', defaultSize + 'px', 'important');
-  
-  document.body.style.fontSize = defaultSize + 'px';
-  document.body.style.setProperty('font-size', defaultSize + 'px', 'important');
-  
-  // Limpiar todos los elementos
-  const allElements = document.querySelectorAll('*');
-  allElements.forEach(el => {
-    if (el.style.fontSize && el.style.fontSize !== '') {
-      el.style.fontSize = '';
-    }
-  });
-  
-  localStorage.removeItem('fontSize');
-  showNotification('🔍 Zoom restablecido a 16px', 'info');
-  
-  // Forzar reflow
-  void document.body.offsetHeight;
-}
-
-// Atajos específicos para la tabla
-document.addEventListener("keydown", (e) => {
-  // Solo si estamos en la tabla
-  if (!e.target.closest('#tabla-body')) return;
-  
-  // Control + D: Duplicar fila actual
-  if ((e.ctrlKey || e.metaKey) && e.key === "d") {
-    e.preventDefault();
-    const row = e.target.closest('tr');
-    if (row && typeof duplicateEntry === "function") {
-      const index = Array.from(row.parentNode.children).indexOf(row);
-      duplicateEntry(index);
-    }
-  }
-  
-  // Supr: Eliminar fila actual
-  if (e.key === "Delete" && e.target.closest('tr')) {
-    const row = e.target.closest('tr');
-    if (row && typeof deleteEntry === "function") {
-      const index = Array.from(row.parentNode.children).indexOf(row);
-      deleteEntry(index);
-    }
-  }
-});
-
 if (toggleEntries) {
   toggleEntries.addEventListener("click", () => togglePanel(entriesBody, toggleEntries));
 }
@@ -7302,71 +6439,3 @@ gastos.forEach(g => {
 
 console.log("🔧 Sistema de eliminación por identidad activado");
 console.log("📋 Ahora puedes eliminar registros específicos por categoría o descripción dentro de un rango");
-
-// 🔴 FUNCIÓN DE DIAGNÓSTICO PARA VERIFICAR ORDEN CRONOLÓGICO
-function diagnosticarOrdenCronologico() {
-  console.log("🔍 === DIAGNÓSTICO DE ORDEN CRONOLÓGICO ===");
-  
-  // 1. Verificar orden cronológico
-  let ordenCronologicoCorrecto = true;
-  for (let i = 1; i < gastos.length; i++) {
-    const fechaActual = new Date(gastos[i].fecha);
-    const fechaAnterior = new Date(gastos[i-1].fecha);
-    if (fechaActual < fechaAnterior) {
-      ordenCronologicoCorrecto = false;
-      console.log(`❌ Error cronológico en posición ${i}: ${gastos[i-1].fecha} → ${gastos[i].fecha}`);
-      break;
-    }
-  }
-  
-  if (ordenCronologicoCorrecto) {
-    console.log("✅ Orden cronológico correcto");
-  }
-  
-  // 2. Verificar numeración correlativa
-  let numeracionCorrelativa = true;
-  for (let i = 0; i < gastos.length; i++) {
-    if (gastos[i].numero !== i + 1) {
-      numeracionCorrelativa = false;
-      console.log(`❌ Error de numeración en posición ${i}: esperado ${i + 1}, encontrado ${gastos[i].numero}`);
-      break;
-    }
-  }
-  
-  if (numeracionCorrelativa) {
-    console.log("✅ Numeración correlativa correcta");
-  }
-  
-  // 3. Mostrar primeros y últimos registros
-  console.log("📋 Primeros 5 registros (orden cronológico):");
-  gastos.slice(0, 5).forEach((gasto, index) => {
-    console.log(`  ${gasto.numero}. ${gasto.fecha} - ${gasto.nombre} (${gasto.tipo})`);
-  });
-  
-  if (gastos.length > 5) {
-    console.log("📋 Últimos 5 registros (orden cronológico):");
-    gastos.slice(-5).forEach((gasto, index) => {
-      console.log(`  ${gasto.numero}. ${gasto.fecha} - ${gasto.nombre} (${gasto.tipo})`);
-    });
-  }
-  
-  // 4. Verificar consistencia entre orden cronológico y numeración
-  let consistenciaPerfecta = true;
-  for (let i = 0; i < gastos.length; i++) {
-    if (gastos[i].numero !== i + 1) {
-      consistenciaPerfecta = false;
-      break;
-    }
-  }
-  
-  console.log(consistenciaPerfecta ? "✅ CONSISTENCIA PERFECTA: Orden cronológico = Numeración correlativa" : "❌ INCONSISTENCIA detectada");
-  
-  console.log("🔍 === FIN DEL DIAGNÓSTICO ===");
-}
-
-// Ejecutar diagnóstico después de cargar datos
-setTimeout(() => {
-  if (typeof gastos !== 'undefined' && gastos.length > 0) {
-    diagnosticarOrdenCronologico();
-  }
-}, 2000);

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Master AI Engineer - Script de Construcción y Publicación Automática v1.0.4
+ * Master AI Engineer - Script de Construcción y Publicación Automática v1.0.6
  * Sistema automatizado para construir y publicar la app en GitHub
  */
 
@@ -9,7 +9,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-console.log('🚀 Iniciando construcción y publicación automática - Master AI Engineer v1.0.4');
+console.log('🚀 Iniciando construcción y publicación automática - Master AI Engineer v1.0.6');
 
 // Función para ejecutar comandos
 function runCommand(command, description) {
