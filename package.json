@@ -1,7 +1,7 @@
 {
   "name": "app-gastos-desktop",
-  "version": "1.0.6",
-  "description": "App de gastos de escritorio con auto-update en Electron - Master AI Engineer v1.0.6",
+  "version": "1.0.7",
+  "description": "App de gastos de escritorio con auto-update en Electron - Master AI Engineer v1.0.7",
   "main": "electron/main.js",
   "author": "Master AI Engineer",
   "license": "MIT",
