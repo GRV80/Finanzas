@@ -13,12 +13,4 @@ contextBridge.exposeInMainWorld("desktopApp", {
     ipcRenderer.on("updater:event", listener);
     return () => ipcRenderer.removeListener("updater:event", listener);
   },
-  // Soporte para eventos de zoom
-  onZoomChanged: callback => {
-    const listener = (_event, zoomFactor) => callback(zoomFactor);
-    ipcRenderer.on("zoom-changed", listener);
-    return () => ipcRenderer.removeListener("zoom-changed", listener);
-  },
-  setZoomFactor: (factor) => ipcRenderer.invoke("zoom:set", factor),
-  getZoomFactor: () => ipcRenderer.invoke("zoom:get"),
 });

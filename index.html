@@ -40,8 +40,33 @@
     </nav>
     
     <div class="sidebar-footer">
-      <div class="sidebar-theme-info">
-        <span id="sidebarCurrentTheme">Natural</span>
+      <div class="sidebar-theme-controls">
+        <label>
+          Tema:
+          <select id="headerThemeSelect">
+            <option value="natural" selected>🎨</option>
+            <option value="blue">🔵 Azul</option>
+            <option value="green">🟢 Verde</option>
+            <option value="orange">🟠 Naranja</option>
+            <option value="purple">🟣 Morado</option>
+            <option value="red">🔴 Rojo</option>
+            <option value="teal">🟦 Verde azulado</option>
+            <option value="gray">⚫ Gris</option>
+            <option value="neutral">⚪ Neutro</option>
+            <option value="gold">🟡 Dorado</option>
+            <option value="rose">🌸 Rosa</option>
+            <option value="ocean">🌊 Océano</option>
+            <option value="mint">🟩 Menta</option>
+            <option value="turquoise">🟦 Turquesa</option>
+            <option value="sky">🌥 Cielo</option>
+            <option value="cornflower">🌻 Aciano</option>
+            <option value="steel">⬜ Acero</option>
+            <option value="midnight">🌑 Medianoche</option>
+          </select>
+        </label>
+        <button type="button" id="headerResetTheme" class="secondary-button">
+          <span class="reset-icon">🔄</span>
+        </button>
       </div>
     </div>
   </aside>
@@ -60,39 +85,10 @@
         <button type="button" id="downloadUpdateBtn" hidden>Descargar</button>
         <button type="button" id="installUpdateBtn" hidden>Instalar</button>
       </div>
-    </section>
-    <div class="app-hero-copy">
-      <p class="app-kicker">Panel financiero personal</p>
-      <h1>Control Económico</h1>
-    </div>
-    <div class="hero-controls-stack">
-      <div class="hero-theme-controls">
-        <label>
-          Tema:
-          <select id="headerThemeSelect">
-            <option value="natural" selected>Natural</option>
-            <option value="blue">Azul</option>
-            <option value="green">Verde</option>
-            <option value="orange">Naranja</option>
-            <option value="purple">Morado</option>
-            <option value="red">Rojo</option>
-            <option value="teal">Verde azulado</option>
-            <option value="gray">Gris</option>
-            <option value="neutral">Neutro</option>
-            <option value="gold">Dorado</option>
-            <option value="rose">Rosa</option>
-            <option value="ocean">Océano</option>
-            <option value="mint">Menta</option>
-            <option value="turquoise">Turquesa</option>
-            <option value="sky">Cielo</option>
-            <option value="cornflower">Aciano</option>
-            <option value="steel">Acero</option>
-            <option value="midnight">Medianoche</option>
-          </select>
-        </label>
-        <button type="button" id="headerResetTheme" class="secondary-button">Restablecer tema</button>
+      <div class="app-hero-copy">
+        <p class="app-kicker">Panel financiero personal</p>
       </div>
-    </div>
+    </section>
   </header>
 
   <section class="panel" id="entriesPanel">
@@ -103,9 +99,9 @@
       <div class="panel-actions">
         <button type="button" id="btnExport">Exportar</button>
         <button type="button" id="btnImport">Importar</button>
-        <button type="button" id="btnRestore" class="secondary-button">Restablecer</button>
+        <button type="button" id="btnRestore" class="secondary-button" title="Restablecer">↻</button>
         <button type="button" id="btnClear">Vaciar</button>
-        <button type="button" class="panel-toggle" id="toggleEntries">Ocultar</button>
+        <button type="button" class="panel-toggle" id="toggleEntries" title="Mostrar/Ocultar panel de registro">👁️</button>
         <input type="file" id="importFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display:none" />
       </div>
     </div>
@@ -202,7 +198,7 @@
         <button type="button" id="btnExportAlmanaque">Exportar</button>
         <button type="button" id="btnImportAlmanaque">Importar</button>
         <button type="button" id="btnClearAlmanaque">Vaciar</button>
-        <button type="button" class="panel-toggle" id="toggleAlmanaque">Ocultar</button>
+        <button type="button" class="panel-toggle" id="toggleAlmanaque" title="Mostrar/Ocultar panel de almanaque">👁️</button>
         <input type="file" id="importAlmanaqueFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display:none" />
       </div>
     </div>
@@ -280,10 +276,10 @@
     <div class="panel-header">
       <h2>Dashboard</h2>
       <div class="panel-actions">
-        <button type="button" id="btnExportDashboard" title="Exportar resumen en múltiples formatos">📊 Exportar resumen</button>
-        <button type="button" id="btnRefreshDashboard" title="Actualizar datos del dashboard">🔄 Actualizar</button>
-        <button type="button" id="btnFullscreenDashboard" title="Pantalla completa">⛶ Pantalla completa</button>
-        <button type="button" class="panel-toggle" id="toggleDashboard" title="Mostrar/Ocultar dashboard">Ocultar</button>
+        <button type="button" id="btnExportDashboard" title="Exportar resumen en múltiples formatos">📊 Exportar</button>
+        <button type="button" id="btnRefreshDashboard" title="Actualizar datos del dashboard">🔄</button>
+        <button type="button" id="btnFullscreenDashboard" title="Pantalla completa">⛶</button>
+        <button type="button" class="panel-toggle" id="toggleDashboard" title="Mostrar/Ocultar dashboard">👁️</button>
       </div>
     </div>
     <div class="panel-body" id="dashboardBody">
