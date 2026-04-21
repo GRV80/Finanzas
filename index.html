@@ -10,20 +10,18 @@
   <!-- Sidebar Principal -->
   <aside class="sidebar" id="mainSidebar">
     <div class="sidebar-header">
-      <div class="logo-container">
-        <div class="logo">
-          <div class="logo-icon">
-            <img src="img/Blue_Lion_Logo.png" alt="App Gastos Logo" class="logo-img">
-          </div>
-        </div>
-      </div>
-      <div class="sidebar-subtitle">
-        <img src="img/ContaFin_Blue Lion_Logo.png" alt="Control Financiero Profesional" class="nombre-img">
+      <div class="sidebar-subtitle" id="toggleSidebar">
+        <img src="img/CF-icon.svg" alt="Control Financiero Profesional" class="nombre-img">
       </div>
     </div>
     
     <nav class="sidebar-nav">
-      <button class="sidebar-nav-btn active" data-panel="entriesPanel" id="sidebarBtnRegistro">
+      <button class="sidebar-nav-btn" data-panel="inicioPanel" id="sidebarBtnInicio">
+        <span class="sidebar-icon"><img src="img/home-icon.svg" alt="Inicio" class="sidebar-icon-img"></span>
+        <span class="sidebar-text">Inicio</span>
+      </button>
+      
+      <button class="sidebar-nav-btn " data-panel="entriesPanel" id="sidebarBtnRegistro">
         <span class="sidebar-icon">📊</span>
         <span class="sidebar-text">Registro</span>
       </button>
@@ -37,6 +35,46 @@
         <span class="sidebar-icon">📈</span>
         <span class="sidebar-text">Dashboard</span>
       </button>
+      
+      <button class="sidebar-nav-btn" data-panel="calendarPanel" id="sidebarBtnCalendar">
+        <span class="sidebar-icon">💼</span>
+        <span class="sidebar-text">Reuniones</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" data-panel="tasksPanel" id="sidebarBtnTasks">
+        <span class="sidebar-icon">📝</span>
+        <span class="sidebar-text">Tareas</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" data-panel="iaPanel" id="sidebarBtnAI">
+        <span class="sidebar-icon">🤖</span>
+        <span class="sidebar-text">IA</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" data-panel="reportesPanel" id="sidebarBtnReports">
+        <span class="sidebar-icon">📊</span>
+        <span class="sidebar-text">Reportes</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" data-panel="backupPanel" id="sidebarBtnBackup">
+        <span class="sidebar-icon">💾</span>
+        <span class="sidebar-text">Backup</span>
+      </button>
+      
+      <ul class="sidebar-settings-list">
+        <li class="sidebar-settings-item">
+          <div class="sidebar-nav-btn" data-panel="configPanel" id="sidebarBtnSettings">
+            <span class="sidebar-icon">⚙️</span>
+            <span class="sidebar-text">Configuración</span>
+          </div>
+          <ul class="settings-sublist" id="settingsSublist">
+            <li><button type="button" id="createShortcutBtn" class="secondary-button">Acceso directo</button></li>
+            <li><button type="button" id="checkUpdatesBtn" class="secondary-button">Actualizar</button></li>
+            <li><button type="button" id="downloadUpdateBtn" class="secondary-button">Descargar</button></li>
+            <li><button type="button" id="installUpdateBtn" class="secondary-button">Instalar</button></li>
+          </ul>
+        </li>
+      </ul>
     </nav>
     
     <div class="sidebar-footer">
@@ -65,7 +103,7 @@
           </select>
         </label>
         <button type="button" id="headerResetTheme" class="secondary-button">
-          <span class="reset-icon">🔄</span>
+          <span class="reset-icon"><img src="img/Rehacer.png" alt="Inicio" class="sidebar-icon-img"></span>
         </button>
       </div>
     </div>
@@ -73,23 +111,6 @@
 
   <!-- Contenido Principal -->
   <main class="main-content">
-    <header class="app-hero">
-    <section class="desktop-shell" id="desktopShell" hidden>
-      <div class="desktop-shell-copy">
-        <strong id="desktopVersion">Version web</strong>
-        <span id="updateStatus"></span>
-      </div>
-      <div class="desktop-shell-actions">
-        <button type="button" id="createShortcutBtn" class="secondary-button">Acceso directo</button>
-        <button type="button" id="checkUpdatesBtn" class="secondary-button">Actualizar</button>
-        <button type="button" id="downloadUpdateBtn" hidden>Descargar</button>
-        <button type="button" id="installUpdateBtn" hidden>Instalar</button>
-      </div>
-      <div class="app-hero-copy">
-        <p class="app-kicker">Panel financiero personal</p>
-      </div>
-    </section>
-  </header>
 
   <section class="panel" id="entriesPanel">
     <div class="panel-header">
@@ -101,7 +122,7 @@
         <button type="button" id="btnImport">Importar</button>
         <button type="button" id="btnRestore" class="secondary-button" title="Restablecer">↻</button>
         <button type="button" id="btnClear">Vaciar</button>
-        <button type="button" class="panel-toggle" id="toggleEntries" title="Mostrar/Ocultar panel de registro">👁️</button>
+        <button type="button" class="panel-toggle" id="toggleEntries" title="Mostrar/Ocultar panel de registro"></button>
         <input type="file" id="importFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display:none" />
       </div>
     </div>
@@ -113,16 +134,17 @@
         <form id="gastosForm" class="entry-form-row"><input type="file" id="importAlmanaqueFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display: none;">
 </form>
         <div id="formFeedback" class="form-feedback entry-feedback" hidden></div>
+        
+      </div>
+    <div class="entries-toolbar">
+
         <div class="entry-controls-row">
-          <input type="text" id="newColumnName" placeholder="Nueva columna (ej: Proyecto)" autocomplete="off">
+          <input type="text" id="newColumnName" placeholder="Nueva columna.." autocomplete="off">
           <button type="button" id="btnAddColumn">Agregar columna</button>
           <button type="button" id="btnAddRow">Nueva fila</button>
           <button type="button" id="btnUndo" style="display: none;">Deshacer</button>
         </div>
-      </div>
-      <div class="entries-toolbar">
-        <input type="search" id="searchInput" placeholder="Buscar artículo o movimiento..." autocomplete="off">
-        <button type="button" id="searchButton">Buscar</button>
+
         <div class="date-filter-pills" id="filterDateMode">
           <button type="button" class="date-filter-pill is-active" data-mode="all">Todos</button>
           <button type="button" class="date-filter-pill" data-mode="day">Día</button>
@@ -139,7 +161,7 @@
           <option value="">Año</option>
         </select>
         <button type="button" id="clearFilters" class="secondary-button">Limpiar filtros</button>
-      </div>
+    </div>
       <div class="entries-summary" id="entriesSummary">Mostrando todos los registros.</div>
       <table>
         <thead>
@@ -198,7 +220,7 @@
         <button type="button" id="btnExportAlmanaque">Exportar</button>
         <button type="button" id="btnImportAlmanaque">Importar</button>
         <button type="button" id="btnClearAlmanaque">Vaciar</button>
-        <button type="button" class="panel-toggle" id="toggleAlmanaque" title="Mostrar/Ocultar panel de almanaque">👁️</button>
+        <button type="button" class="panel-toggle" id="toggleAlmanaque" title="Mostrar/Ocultar panel de almanaque"></button>
         <input type="file" id="importAlmanaqueFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display:none" />
       </div>
     </div>
@@ -279,7 +301,7 @@
         <button type="button" id="btnExportDashboard" title="Exportar resumen en múltiples formatos">📊 Exportar</button>
         <button type="button" id="btnRefreshDashboard" title="Actualizar datos del dashboard">🔄</button>
         <button type="button" id="btnFullscreenDashboard" title="Pantalla completa">⛶</button>
-        <button type="button" class="panel-toggle" id="toggleDashboard" title="Mostrar/Ocultar dashboard">👁️</button>
+        <button type="button" class="panel-toggle" id="toggleDashboard" title="Mostrar/Ocultar dashboard"></button>
       </div>
     </div>
     <div class="panel-body" id="dashboardBody">
@@ -342,7 +364,7 @@
           <option value="ocean">Océano</option>
         </select>
       </label>
-      <button type="button" id="resetTheme" class="reset-theme">Restablecer tema</button>
+      <button type="button" id="resetTheme" class="reset-theme"><img src="img/Rehacer.png" alt="Inicio" class="sidebar-icon-img"></button>
     </div>
 
     <div class="dashboard-layout">

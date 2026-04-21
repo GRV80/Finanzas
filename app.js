@@ -248,6 +248,12 @@ const categories = [
 
   "Salidas",
 
+  "Salida a Comer y Domicilio",
+
+  "Salario / Nómina",
+
+  "Seguros",
+
   "Servicio Básicos",
 
   "Servicios",
@@ -259,6 +265,8 @@ const categories = [
   "Transporte",
 
   "Trabajo",
+
+  "Viajes y Paseos",
 
   "Zapatos",
 
@@ -312,9 +320,273 @@ let gastos = [];
 
 let focusAfterRender = null;
 
+let headerInitialized = false;
+
 let lastDeleted = null;
 
+// Referencias fijas a la estructura de la tabla
+const table = document.querySelector("#entriesPanel table");
+const thead = table?.querySelector("thead");
+const tbody = document.getElementById("tabla-body");
 
+// Funciones para resaltado inteligente de texto
+function normalize(text) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function highlightText(text, query) {
+  if (!text || !query) return text;
+
+  const normalizedText = normalize(text);
+  const normalizedQuery = normalize(query);
+
+  let result = "";
+  let i = 0;
+
+  while (i < text.length) {
+    let slice = "";
+
+    // construir fragmento progresivo
+    for (let j = i; j < text.length; j++) {
+      slice += text[j];
+
+      const normSlice = normalize(slice);
+
+      if (normSlice === normalizedQuery) {
+        result += `<span class="highlight">${slice}</span>`;
+        i = j + 1;
+        break;
+      }
+
+      // si ya se pasó, cortar
+      if (!normalizedQuery.startsWith(normSlice)) {
+        result += text[i];
+        i++;
+        break;
+      }
+
+      // final sin match
+      if (j === text.length - 1) {
+        result += text[i];
+        i++;
+      }
+    }
+  }
+
+  return result;
+}
+
+// Función de distancia Levenshtein para búsqueda tolerante a errores
+function levenshtein(a, b) {
+  const matrix = [];
+
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+
+  return matrix[b.length][a.length];
+}
+
+// Función de coincidencia inteligente tolerante a errores
+function isFuzzyMatch(text, query) {
+  if (!query) return true;
+
+  const t = normalize(text);
+  const q = normalize(query);
+
+  // coincidencia directa
+  if (t.includes(q)) return true;
+
+  // tolerancia a errores (distancia)
+  const distance = levenshtein(t, q);
+
+  return distance <= 2; // tolerancia (ajustable)
+}
+
+// Crear modal de búsqueda global solo si no existe
+if (!document.getElementById("globalSearch")) {
+  const modal = document.createElement("div");
+  modal.id = "globalSearch";
+  modal.className = "global-search hidden";
+
+  modal.innerHTML = `
+    <input type="text" id="globalSearchInput" placeholder="Buscar..." />
+    <div id="globalSearchResults"></div>
+  `;
+
+  document.body.appendChild(modal);
+}
+
+// Atajo Ctrl + K para búsqueda global (aislado y seguro)
+document.addEventListener("keydown", (e) => {
+  if (e.ctrlKey && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+
+    const modal = document.getElementById("globalSearch");
+    const input = document.getElementById("globalSearchInput");
+
+    if (!modal || !input) return;
+
+    modal.classList.remove("hidden");
+    input.value = "";
+    input.focus();
+  }
+});
+
+// Cierre seguro con ESC
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    const modal = document.getElementById("globalSearch");
+    if (modal) modal.classList.add("hidden");
+  }
+});
+
+// Función de normalización para acentos y errores
+function normalizar(texto) {
+  return (texto || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+// Función global de búsqueda con todas las columnas
+function buscarGlobal(lista, query) {
+  const q = normalizar(query);
+
+  return lista
+    .map(item => {
+
+      const campos = {
+        N: item.id || "",
+        tipo: item.tipo || "",
+        fecha: item.fecha || "",
+        nombre: item.nombre || "",
+        categoria: item.categoria || "",
+        descripcion: item.descripcion || "",
+        precio: item.precio || ""
+      };
+
+      let score = 0;
+      let matchField = "";
+      let matchValue = "";
+
+      Object.entries(campos).forEach(([key, value]) => {
+        const texto = normalizar(String(value));
+
+        if (texto.includes(q)) {
+          score += 10;
+
+          if (!matchField) {
+            matchField = key;
+            matchValue = value;
+          }
+        }
+      });
+
+      // prioridad
+      if (normalizar(item.nombre || "").includes(q)) score += 30;
+      if (normalizar(item.categoria || "").includes(q)) score += 20;
+
+      return { item, score, matchField, matchValue };
+    })
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+}
+
+// Función para resaltar texto encontrado
+function resaltarTexto(texto, query) {
+  if (!query) return texto;
+
+  const q = normalizar(query);
+  const t = normalizar(texto);
+
+  const index = t.indexOf(q);
+  if (index === -1) return texto;
+
+  const original = texto.substr(index, query.length);
+
+  return texto.replace(
+    original,
+    `<span class="highlight">${original}</span>` 
+  );
+}
+
+// Render correcto sin romper eventos
+function renderResultados(resultados, query) {
+  const container = document.getElementById("globalSearchResults");
+  container.innerHTML = "";
+
+  resultados.slice(0, 10).forEach(r => {
+    const g = r.item;
+
+    const item = document.createElement("div");
+    item.className = "result-item";
+
+    item.innerHTML = `
+      <div><strong>${g.nombre || "Sin nombre"}</strong></div>
+      <div style="font-size:12px; opacity:0.7;">
+        ${r.matchField.toUpperCase()}: 
+        ${resaltarTexto(r.matchValue, query)}
+      </div>
+    `;
+
+    item.addEventListener("click", () => {
+      irAFila(g.id);
+    });
+
+    container.appendChild(item);
+  });
+}
+
+// Scroll real a la fila
+function irAFila(id) {
+  const fila = document.querySelector(`tr[data-id="${id}"]`);
+
+  if (!fila) return;
+
+  fila.scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+  });
+
+  fila.classList.add("highlight-row");
+
+  setTimeout(() => {
+    fila.classList.remove("highlight-row");
+  }, 2000);
+}
+
+// Input conectado con búsqueda global
+const input = document.getElementById("globalSearchInput");
+
+input.addEventListener("input", (e) => {
+  const query = e.target.value;
+
+  if (!query) {
+    document.getElementById("globalSearchResults").innerHTML = "";
+    return;
+  }
+
+  const resultados = buscarGlobal(gastos, query);
+
+  renderResultados(resultados, query);
+});
 
 // Hacer el array gastos accesible globalmente para Firebase
 
@@ -4371,6 +4643,11 @@ function downloadTextFile(filename, content) {
 
 
 
+// Asegurar que SIEMPRE use gastos reales
+function getDataForDashboard() {
+  return gastos || [];
+}
+
 function getDashboardSummaryData() {
 
   if (!dashboardPeriod || !dashboardDate) return null;
@@ -4385,9 +4662,14 @@ function getDashboardSummaryData() {
 
   const { start, end } = getPeriodRange(period, ref);
 
+  // Validar que tenemos datos reales
+  const data = getDataForDashboard();
+  if (!data.length) {
+    console.warn("Dashboard sin datos");
+    return null;
+  }
 
-
-  const filtered = gastos.filter(g => {
+  const filtered = data.filter(g => {
 
     const d = new Date(g.fecha);
 
@@ -6256,7 +6538,7 @@ function getFilteredEntries() {
 
       !tableFilters.nombre ||
 
-      normalizeText(record.nombre || "").includes(normalizeText(tableFilters.nombre));
+      isFuzzyMatch(record.nombre || "", tableFilters.nombre);
 
     
 
@@ -6266,7 +6548,7 @@ function getFilteredEntries() {
 
       !tableFilters.descripcion ||
 
-      normalizeText(record.descripcion || "").includes(normalizeText(tableFilters.descripcion));
+      isFuzzyMatch(record.descripcion || "", tableFilters.descripcion);
 
     
 
@@ -7072,7 +7354,13 @@ function updateDashboard() {
 
   if (!dashboardPeriod || !dashboardDate) return;
 
+  // Validar que tenemos datos reales
+  if (!gastos || gastos.length === 0) {
+    console.warn("Dashboard sin datos - gastos vacío");
+    return;
+  }
 
+  console.log(`📊 Dashboard actualizando con ${gastos.length} registros`);
 
   const period = dashboardPeriod.value;
 
@@ -7082,8 +7370,7 @@ function updateDashboard() {
 
   const { start, end } = getPeriodRange(period, ref);
 
-
-
+  // Filtrar datos reales de gastos
   const filtered = gastos.filter(g => {
 
     const d = new Date(g.fecha);
@@ -7091,6 +7378,10 @@ function updateDashboard() {
     return !isNaN(d.getTime()) && d >= start && d <= end;
 
   });
+
+  console.log(`📊 Dashboard filtrando ${filtered.length} registros del período`);
+  console.log(`📊 Período: ${period}, Métrica: ${metric}`);
+  console.log(`📊 Rango: ${start.toISOString().slice(0,10)} - ${end.toISOString().slice(0,10)}`);
 
 
 
@@ -7793,12 +8084,9 @@ function updateChart(labels, values, label, type = "bar") {
 
 
 function buildTableHeader() {
-
-  const thead = document.createElement("thead");
+  thead.innerHTML = "";
 
   const tr = document.createElement("tr");
-
-
 
   columns.forEach((col, colIndex) => {
 
@@ -8212,12 +8500,7 @@ function buildTableHeader() {
 
   tr.appendChild(actionsTh);
 
-
-
   thead.appendChild(tr);
-
-  return thead;
-
 }
 
 
@@ -9865,32 +10148,19 @@ function setUndoVisible(visible) {
 }
 
 
-
 function render() {
-
-  const table = entriesPanel?.querySelector("table");
-
-  if (!table) return;
-
-  const existingThead = table.querySelector("thead");
-
-
-
-  if (existingThead) {
-
-    existingThead.remove();
-
+  if (!headerInitialized) {
+    buildTableHeader();
+    headerInitialized = true;
   }
 
+  renderTableBodyOnly();
+}
 
 
-  table.prepend(buildTableHeader());
-
-
-
-  tablaBody.innerHTML = "";
-
-  visibleRows = getFilteredEntries();
+function renderTableBodyOnly() {
+  tbody.innerHTML = "";
+  const visibleRows = getFilteredEntries();
 
   const totalRows = visibleRows.length;
 
@@ -9912,34 +10182,20 @@ function render() {
 
     emptyRow.appendChild(emptyCell);
 
-    tablaBody.appendChild(emptyRow);
+    tbody.appendChild(emptyRow);
 
   }
 
-
-
   visibleRows.forEach((gasto, rowIndex) => {
-
     const tr = document.createElement("tr");
-
     tr.dataset.id = gasto.id;
 
-
-
     columns.forEach((col, colIndex) => {
-
       tr.appendChild(createEditableCell(gasto, col, rowIndex, colIndex, totalRows, totalCols));
-
     });
 
-
-
     tr.appendChild(createRowActionsCell(gasto));
-
-
-
-    tablaBody.appendChild(tr);
-
+    tbody.appendChild(tr);
   });
 
 
@@ -12300,7 +12556,28 @@ function createEditableCell(gasto, col, rowIndex, colIndex, totalRows, totalCols
 
   } else {
 
-    td.textContent = formatValue(gasto[col.key], col.type, col.key);
+    let displayValue = formatValue(gasto[col.key], col.type, col.key);
+
+    // APLICAR RESALTADO INTELIGENTE SOLO EN COLUMNAS DE TEXTO
+    if (col.key === "nombre" || col.key === "descripcion") {
+      let query = "";
+
+      // usar filtros reales del sistema
+      if (col.key === "nombre") {
+        query = tableFilters.nombre || "";
+      }
+
+      if (col.key === "descripcion") {
+        query = tableFilters.descripcion || "";
+      }
+
+      // DEBUG TEMPORAL
+      console.log("QUERY:", query, "TEXT:", displayValue);
+
+      displayValue = highlightText(displayValue, query);
+    }
+
+    td.innerHTML = displayValue;
 
     
 
@@ -12894,34 +13171,27 @@ async function cargarDatosDesdeFirebase() {
 
 function initializeSidebar() {
 
-  // Configurar event listeners para los botones del sidebar
+  // Lógica global unificada para TODOS los botones del sidebar
+  document.querySelectorAll(".sidebar-nav-btn").forEach(btn => {
+    btn.onclick = () => {
+      const panel = btn.dataset.panel;
+      if (panel) showPanel(panel);
 
-  if (sidebarBtnRegistro) {
+      document.querySelectorAll(".sidebar-nav-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    };
+  });
 
-    sidebarBtnRegistro.addEventListener("click", () => showPanel("entriesPanel"));
+  // Toggle del sidebar con botón CF
+  const toggleBtn = document.getElementById("toggleSidebar");
 
+  if (toggleBtn) {
+    toggleBtn.onclick = () => {
+      document.body.classList.toggle("sidebar-collapsed");
+    };
   }
-
-  
-
-  if (sidebarBtnAlmanaque) {
-
-    sidebarBtnAlmanaque.addEventListener("click", () => showPanel("almanaquePanelSection"));
-
-  }
-
-  
-
-  if (sidebarBtnDashboard) {
-
-    sidebarBtnDashboard.addEventListener("click", () => showPanel("dashboardPanel"));
-
-  }
-
-  
 
   // Actualizar tema actual en el sidebar
-
   updateSidebarTheme();
 
 }
@@ -15116,6 +15386,36 @@ function diagnosticarOrdenCronologico() {
 
 
 
+// Toggle de Configuración con clic
+document.addEventListener('DOMContentLoaded', function() {
+  const settingsBtn = document.getElementById('sidebarBtnSettings');
+  const settingsItem = document.querySelector('.sidebar-settings-item');
+  
+  if (settingsBtn && settingsItem) {
+    settingsBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Toggle active class
+      settingsItem.classList.toggle('active');
+      
+      // Cerrar otros menús si los hay
+      document.querySelectorAll('.sidebar-settings-item.active').forEach(item => {
+        if (item !== settingsItem) {
+          item.classList.remove('active');
+        }
+      });
+    });
+    
+    // Cerrar al hacer clic fuera
+    document.addEventListener('click', function(e) {
+      if (!settingsItem.contains(e.target)) {
+        settingsItem.classList.remove('active');
+      }
+    });
+  }
+});
+
 // Ejecutar diagnóstico después de cargar datos
 
 setTimeout(() => {
@@ -15127,4 +15427,11 @@ setTimeout(() => {
   }
 
 }, 2000);
+
+// Interacción básica para botones nuevos del sidebar - Sin romper nada existente
+document.querySelectorAll(".sidebar-nav-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    console.log("Click en:", btn.textContent.trim());
+  });
+});
 
