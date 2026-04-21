@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App de Gastos</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Sidebar Principal -->
+  <aside class="sidebar" id="mainSidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-subtitle" id="toggleSidebar">
+        <img src="img/CF-icon.svg" alt="Control Financiero Profesional" class="nombre-img">
+      </div>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <button class="sidebar-nav-btn" data-panel="inicioPanel" id="sidebarBtnInicio">
+        <span class="sidebar-icon"><img src="img/home-icon.svg" alt="Inicio" class="sidebar-icon-img"></span>
+        <span class="sidebar-text">Inicio</span>
+      </button>
+      
+      <button class="sidebar-nav-btn " data-panel="entriesPanel" id="sidebarBtnRegistro">
+        <span class="sidebar-icon">📊</span>
+        <span class="sidebar-text">Registro</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" data-panel="almanaquePanelSection" id="sidebarBtnAlmanaque">
+        <span class="sidebar-icon">📅</span>
+        <span class="sidebar-text">Almanaque</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" data-panel="dashboardPanel" id="sidebarBtnDashboard">
+        <span class="sidebar-icon">📈</span>
+        <span class="sidebar-text">Dashboard</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" data-panel="calendarPanel" id="sidebarBtnCalendar">
+        <span class="sidebar-icon">💼</span>
+        <span class="sidebar-text">Reuniones</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" data-panel="tasksPanel" id="sidebarBtnTasks">
+        <span class="sidebar-icon">📝</span>
+        <span class="sidebar-text">Tareas</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" data-panel="iaPanel" id="sidebarBtnAI">
+        <span class="sidebar-icon">🤖</span>
+        <span class="sidebar-text">IA</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" data-panel="reportesPanel" id="sidebarBtnReports">
+        <span class="sidebar-icon">📊</span>
+        <span class="sidebar-text">Reportes</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" data-panel="backupPanel" id="sidebarBtnBackup">
+        <span class="sidebar-icon">💾</span>
+        <span class="sidebar-text">Backup</span>
+      </button>
+      
+      <ul class="sidebar-settings-list">
+        <li class="sidebar-settings-item">
+          <div class="sidebar-nav-btn" data-panel="configPanel" id="sidebarBtnSettings">
+            <span class="sidebar-icon">⚙️</span>
+            <span class="sidebar-text">Configuración</span>
+          </div>
+          <ul class="settings-sublist" id="settingsSublist">
+            <li><button type="button" id="createShortcutBtn" class="secondary-button">Acceso directo</button></li>
+            <li><button type="button" id="checkUpdatesBtn" class="secondary-button">Actualizar</button></li>
+            <li><button type="button" id="downloadUpdateBtn" class="secondary-button">Descargar</button></li>
+            <li><button type="button" id="installUpdateBtn" class="secondary-button">Instalar</button></li>
+          </ul>
+        </li>
+      </ul>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="sidebar-theme-controls">
+        <label>
+          Tema:
+          <select id="headerThemeSelect">
+            <option value="natural" selected>🎨</option>
+            <option value="blue">🔵 Azul</option>
+            <option value="green">🟢 Verde</option>
+            <option value="orange">🟠 Naranja</option>
+            <option value="purple">🟣 Morado</option>
+            <option value="red">🔴 Rojo</option>
+            <option value="teal">🟦 Verde azulado</option>
+            <option value="gray">⚫ Gris</option>
+            <option value="neutral">⚪ Neutro</option>
+            <option value="gold">🟡 Dorado</option>
+            <option value="rose">🌸 Rosa</option>
+            <option value="ocean">🌊 Océano</option>
+            <option value="mint">🟩 Menta</option>
+            <option value="turquoise">🟦 Turquesa</option>
+            <option value="sky">🌥 Cielo</option>
+            <option value="cornflower">🌻 Aciano</option>
+            <option value="steel">⬜ Acero</option>
+            <option value="midnight">🌑 Medianoche</option>
+          </select>
+        </label>
+        <button type="button" id="headerResetTheme" class="secondary-button">
+          <span class="reset-icon"><img src="img/Rehacer.png" alt="Inicio" class="sidebar-icon-img"></span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Contenido Principal -->
+  <main class="main-content">
+
+  <section class="panel" id="entriesPanel">
+    <div class="panel-header">
+      <div>
+        <h2>Registro de la Contabilidad</h2>
+      </div>
+      <div class="panel-actions">
+        <button type="button" id="btnExport">Exportar</button>
+        <button type="button" id="btnImport">Importar</button>
+        <button type="button" id="btnRestore" class="secondary-button" title="Restablecer">↻</button>
+        <button type="button" id="btnClear">Vaciar</button>
+        <button type="button" class="panel-toggle" id="toggleEntries" title="Mostrar/Ocultar panel de registro"></button>
+        <input type="file" id="importFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display:none" />
+      </div>
+    </div>
+    <div class="panel-body" id="entriesBody">
+      <div class="entry-capture-panel">
+        <div class="entry-capture-head">
+          <div id="entryFormLabels" class="entry-form-labels"></div>
+        </div>
+        <form id="gastosForm" class="entry-form-row"><input type="file" id="importAlmanaqueFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display: none;">
+</form>
+        <div id="formFeedback" class="form-feedback entry-feedback" hidden></div>
+        
+      </div>
+    <div class="entries-toolbar">
+
+        <div class="entry-controls-row">
+          <input type="text" id="newColumnName" placeholder="Nueva columna.." autocomplete="off">
+          <button type="button" id="btnAddColumn">Agregar columna</button>
+          <button type="button" id="btnAddRow">Nueva fila</button>
+          <button type="button" id="btnUndo" style="display: none;">Deshacer</button>
+        </div>
+
+        <div class="date-filter-pills" id="filterDateMode">
+          <button type="button" class="date-filter-pill is-active" data-mode="all">Todos</button>
+          <button type="button" class="date-filter-pill" data-mode="day">Día</button>
+          <button type="button" class="date-filter-pill" data-mode="month">Mes</button>
+          <button type="button" class="date-filter-pill" data-mode="year">Año</button>
+        </div>
+        <select id="filterDay">
+          <option value="">Día</option>
+        </select>
+        <select id="filterMonth">
+          <option value="">Mes</option>
+        </select>
+        <select id="filterYear">
+          <option value="">Año</option>
+        </select>
+        <button type="button" id="clearFilters" class="secondary-button">Limpiar filtros</button>
+    </div>
+      <div class="entries-summary" id="entriesSummary">Mostrando todos los registros.</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Nombre</th>
+            <th>
+              <div class="th-with-control">
+                <span>Categoría</span>
+              </div>
+            </th>
+            <th>
+              <div class="th-with-control">
+                <span>Cantidad</span>
+                <select id="sortAmount" class="header-sort">
+                  <option value="default">Volver</option>
+                  <option value="desc">Mayor</option>
+                  <option value="asc">Menor</option>
+                </select>
+              </div>
+            </th>
+            <th>
+              <div class="th-with-control">
+                <span>Descripción</span>
+              </div>
+            </th>
+            <th>
+              <div class="th-with-control">
+                <span>Fecha</span>
+                <select id="sortDate" class="header-sort">
+                  <option value="default">Volver</option>
+                  <option value="oldest">Antiguas</option>
+                  <option value="newest">Nuevas</option>
+                  <option value="current">F actual</option>
+                </select>
+              </div>
+            </th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-body"></tbody>
+      </table>
+
+      <div class="totals">
+        <div>Ingresos: <span id="total-income">0</span> €</div>
+        <div>Gastos: <span id="total-expense">0</span> €</div>
+        <div>Saldo: <span id="total">0</span> €</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="almanaquePanelSection">
+    <div class="panel-header">
+      <h2>Almanaque</h2>
+      <div class="panel-actions">
+        <button type="button" id="btnExportAlmanaque">Exportar</button>
+        <button type="button" id="btnImportAlmanaque">Importar</button>
+        <button type="button" id="btnClearAlmanaque">Vaciar</button>
+        <button type="button" class="panel-toggle" id="toggleAlmanaque" title="Mostrar/Ocultar panel de almanaque"></button>
+        <input type="file" id="importAlmanaqueFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display:none" />
+      </div>
+    </div>
+    <div class="panel-body" id="almanaquePanel">
+      <div class="almanaque-controls">
+        <label>
+          Vista:
+          <select id="almanaqueViewMode">
+            <option value="year">Todo el año</option>
+            <option value="month" selected>Todo el mes</option>
+            <option value="day">Día</option>
+          </select>
+        </label>
+        <label>
+          Año:
+          <select id="almanaqueYear"></select>
+        </label>
+        <label>
+          Mes:
+          <select id="almanaqueMonth"></select>
+        </label>
+        <label>
+          Día:
+          <select id="almanaqueDay"></select>
+        </label>
+        <label>
+          Tipo:
+          <select id="almanaqueTypeFilter">
+            <option value="">Todos</option>
+            <option value="Ingreso">Ingresos</option>
+            <option value="Gasto">Gastos</option>
+          </select>
+        </label>
+        <button type="button" id="almanaqueViewDay" class="small">Ver</button>
+        <input type="file" id="almanaqueAttachmentFile" multiple style="display:none" />
+      </div>
+
+      <div class="entries-summary" id="almanaqueSummary">Mostrando todos los movimientos del mes seleccionado.</div>
+
+      <div id="almanaqueDayDetails" class="almanaque-day-details" style="display:none; margin-bottom:12px;">
+        <div>
+          <strong>Movimientos del día:</strong>
+          <input type="date" id="selectedDayInput" />
+          <button type="button" id="applySelectedDay" class="small">Ver</button>
+          <button type="button" id="exportDayAttachments" class="small">Exportar adjuntos</button>
+        </div>
+        <div id="selectedDayList" class="selected-day-table-wrap"></div>
+        <button type="button" id="clearDayView" class="small">Limpiar vista diaria</button>
+      </div>
+
+      <table class="almanaque-table">
+        <thead>
+          <tr>
+            <th>N</th>
+            <th>Tipo</th>
+            <th>Fecha / Hora</th>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Descripción</th>
+            <th>Precio/Total</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="almanaqueBody"></tbody>
+      </table>
+      <div class="totals">
+        <div>Ingresos: <span id="almanaque-income">0</span> €</div>
+        <div>Gastos: <span id="almanaque-expense">0</span> €</div>
+        <div>Saldo: <span id="almanaque-total">0</span> €</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel dashboard" id="dashboardPanel">
+    <div class="panel-header">
+      <h2>Dashboard</h2>
+      <div class="panel-actions">
+        <button type="button" id="btnExportDashboard" title="Exportar resumen en múltiples formatos">📊 Exportar</button>
+        <button type="button" id="btnRefreshDashboard" title="Actualizar datos del dashboard">🔄</button>
+        <button type="button" id="btnFullscreenDashboard" title="Pantalla completa">⛶</button>
+        <button type="button" class="panel-toggle" id="toggleDashboard" title="Mostrar/Ocultar dashboard"></button>
+      </div>
+    </div>
+    <div class="panel-body" id="dashboardBody">
+      <div class="dashboard-controls">
+      <label>
+        Periodo:
+        <select id="dashboardPeriod">
+          <option value="day">Diario</option>
+          <option value="month" selected>Mensual</option>
+          <option value="year">Anual</option>
+        </select>
+      </label>
+
+      <label>
+        Fecha:
+        <div class="date-nav">
+          <button type="button" id="dashboardPrev" aria-label="Anterior">&lt;</button>
+          <input type="date" id="dashboardDate">
+          <button type="button" id="dashboardNext" aria-label="Siguiente">&gt;</button>
+        </div>
+      </label>
+
+      <label>
+        Métrica:
+        <select id="dashboardMetric">
+          <option value="balance" selected>Saldo por categoría</option>
+          <option value="ingresos">Ingresos por categoría</option>
+          <option value="gastos">Gastos por categoría</option>
+          <option value="count">Transacciones por categoría</option>
+          <option value="average">Promedio por categoría</option>
+          <option value="flow">Flujo acumulado</option>
+          <option value="ingresos_gastos">Ingresos vs Gastos</option>
+          <option value="comparative">Comparativa temporal</option>
+          <option value="highest">Mayor movimiento</option>
+          <option value="lowest">Menor movimiento</option>
+          <option value="networth">Balance neto del periodo</option>
+          <option value="savings_rate">Tasa de ahorro</option>
+          <option value="efficiency">Eficiencia financiera</option>
+          <option value="projection">Proyección mensual</option>
+          <option value="cost_optimization">Optimización de Costes</option>
+          <option value="financial_dashboard">Dashboard Financiero</option>
+        </select>
+      </label>
+
+      <label>
+        Tema:
+        <select id="dashboardTheme">
+          <option value="natural" selected>Natural</option>
+          <option value="blue">Azul</option>
+          <option value="green">Verde</option>
+          <option value="orange">Naranja</option>
+          <option value="purple">Morado</option>
+          <option value="dark">Oscuro</option>
+          <option value="red">Rojo</option>
+          <option value="teal">Verde Azulado</option>
+          <option value="gray">Gris</option>
+          <option value="neutral">Neutro</option>
+          <option value="gold">Dorado</option>
+          <option value="rose">Rosa</option>
+          <option value="ocean">Océano</option>
+        </select>
+      </label>
+      <button type="button" id="resetTheme" class="reset-theme"><img src="img/Rehacer.png" alt="Inicio" class="sidebar-icon-img"></button>
+    </div>
+
+    <div class="dashboard-layout">
+      <div class="dashboard-left">
+        <div class="dashboard-cards">
+          <div class="card income-card">
+            <div class="card-icon">💰</div>
+            <div class="card-content">
+              <div class="card-title">Ingresos</div>
+              <div class="card-value" id="dashboardIncome">0 €</div>
+              <div class="card-trend" id="incomeTrend">+0%</div>
+            </div>
+          </div>
+          <div class="card expense-card">
+            <div class="card-icon">💸</div>
+            <div class="card-content">
+              <div class="card-title">Gastos</div>
+              <div class="card-value" id="dashboardExpense">0 €</div>
+              <div class="card-trend" id="expenseTrend">+0%</div>
+            </div>
+          </div>
+          <div class="card balance-card">
+            <div class="card-icon">💎</div>
+            <div class="card-content">
+              <div class="card-title">Saldo</div>
+              <div class="card-value" id="dashboardBalance">0 €</div>
+              <div class="card-trend" id="balanceTrend">+0%</div>
+            </div>
+          </div>
+          <div class="card projection-card">
+            <div class="card-icon">📈</div>
+            <div class="card-content">
+              <div class="card-title">Proyección Mensual</div>
+              <div class="card-value" id="dashboardProjection">0 €</div>
+              <div class="card-trend" id="projectionTrend">+0%</div>
+            </div>
+          </div>
+          <div class="card metric-card">
+            <div class="card-icon">📊</div>
+            <div class="card-content">
+              <div class="card-title">Comparativa Temporal</div>
+              <div class="card-value" id="dashboardMetricValue">0</div>
+              <div class="card-trend" id="metricTrend">+0%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-right">
+        <div class="dashboard-chart">
+          <canvas id="dashboardChart" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+  </main>
+
+  <script src="./node_modules/chart.js/dist/chart.umd.js"></script>
+
+  <!-- Librerías para exportación profesional -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+<script src="firebase-init-simple.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
