@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - App Gastos Pro</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Sidebar Principal -->
+  <aside class="sidebar" id="mainSidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-subtitle" id="toggleSidebar">
+        <img src="img/CF-icon.svg" alt="Control Financiero Profesional" class="nombre-img">
+      </div>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <button class="sidebar-nav-btn" onclick="window.location.href='inicio.html'" id="sidebarBtnInicio">
+        <span class="sidebar-icon">🏠</span>
+        <span class="sidebar-text">Inicio</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='registro.html'" id="sidebarBtnRegistro">
+        <span class="sidebar-icon">📊</span>
+        <span class="sidebar-text">Registro</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='almanaque.html'" id="sidebarBtnAlmanaque">
+        <span class="sidebar-icon">📅</span>
+        <span class="sidebar-text">Almanaque</span>
+      </button>
+      
+      <button class="sidebar-nav-btn active" onclick="window.location.href='dashboard.html'" id="sidebarBtnDashboard">
+        <span class="sidebar-icon">📈</span>
+        <span class="sidebar-text">Dashboard</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='reuniones.html'" id="sidebarBtnReuniones">
+        <span class="sidebar-icon">💼</span>
+        <span class="sidebar-text">Reuniones</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='tareas.html'" id="sidebarBtnTasks">
+        <span class="sidebar-icon">📝</span>
+        <span class="sidebar-text">Tareas</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='reportes.html'" id="sidebarBtnReports">
+        <span class="sidebar-icon">📊</span>
+        <span class="sidebar-text">Reportes</span>
+      </button>
+      
+      <!-- Botones Globales -->
+      <div class="sidebar-global-buttons">
+        <button class="sidebar-nav-btn ai-btn" id="sidebarBtnAI">
+          <span class="sidebar-icon">🤖</span>
+          <span class="sidebar-text">IA</span>
+        </button>
+        
+        <button class="sidebar-nav-btn backup-btn" id="sidebarBtnBackup">
+          <span class="sidebar-icon">💾</span>
+          <span class="sidebar-text">Backup</span>
+        </button>
+        
+        <div class="sidebar-settings-item">
+          <div class="sidebar-nav-btn config-btn" id="sidebarBtnSettings">
+            <span class="sidebar-icon">⚙️</span>
+            <span class="sidebar-text">Configuración</span>
+          </div>
+          <ul class="settings-sublist" id="settingsSublist">
+            <li><button type="button" id="createShortcutBtn" class="secondary-button">Acceso directo</button></li>
+            <li><button type="button" id="checkUpdatesBtn" class="secondary-button">Actualizar</button></li>
+            <li><button type="button" id="downloadUpdateBtn" class="secondary-button">Descargar</button></li>
+            <li><button type="button" id="installUpdateBtn" class="secondary-button">Instalar</button></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="sidebar-theme-controls">
+        <label>
+          Tema:
+          <select id="headerThemeSelect">
+            <option value="natural" selected>🎨</option>
+            <option value="blue">🔵 Azul</option>
+            <option value="green">🟢 Verde</option>
+            <option value="orange">🟠 Naranja</option>
+            <option value="purple">🟣 Morado</option>
+            <option value="red">🔴 Rojo</option>
+            <option value="teal">🟦 Verde azulado</option>
+            <option value="gray">⚫ Gris</option>
+            <option value="neutral">⚪ Neutro</option>
+            <option value="gold">🟡 Dorado</option>
+            <option value="rose">🌸 Rosa</option>
+            <option value="ocean">🌊 Océano</option>
+            <option value="mint">🟩 Menta</option>
+            <option value="turquoise">🟦 Turquesa</option>
+            <option value="sky">🌥 Cielo</option>
+            <option value="cornflower">🌻 Aciano</option>
+            <option value="steel">⬜ Acero</option>
+            <option value="midnight">🌑 Medianoche</option>
+          </select>
+        </label>
+        <button type="button" id="headerResetTheme" class="secondary-button">
+          <span class="reset-icon">🔄</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Contenido Principal -->
+  <main class="main-content">
+    <section class="panel dashboard active" id="dashboardPanel">
+      <div class="panel-header">
+        <h2>📈 Dashboard</h2>
+        <div class="panel-actions">
+          <button type="button" id="btnExportDashboard" title="Exportar resumen en múltiples formatos">📊 Exportar</button>
+          <button type="button" id="btnRefreshDashboard" title="Actualizar datos del dashboard">🔄</button>
+          <button type="button" id="btnFullscreenDashboard" title="Pantalla completa">⛶</button>
+          <button type="button" class="panel-toggle" id="toggleDashboard" title="Mostrar/Ocultar dashboard"></button>
+        </div>
+      </div>
+      <div class="panel-body" id="dashboardBody">
+        <div class="dashboard-controls">
+        <label>
+          Periodo:
+          <select id="dashboardPeriod">
+            <option value="day">Diario</option>
+            <option value="month" selected>Mensual</option>
+            <option value="year">Anual</option>
+          </select>
+        </label>
+
+        <label>
+          Fecha:
+          <div class="date-nav">
+            <button type="button" id="dashboardPrev" aria-label="Anterior">&lt;</button>
+            <input type="date" id="dashboardDate">
+            <button type="button" id="dashboardNext" aria-label="Siguiente">&gt;</button>
+          </div>
+        </label>
+
+        <label>
+          Métrica:
+          <select id="dashboardMetric">
+            <option value="balance" selected>Saldo por categoría</option>
+            <option value="ingresos">Ingresos por categoría</option>
+            <option value="gastos">Gastos por categoría</option>
+            <option value="count">Transacciones por categoría</option>
+            <option value="average">Promedio por categoría</option>
+            <option value="flow">Flujo acumulado</option>
+            <option value="ingresos_gastos">Ingresos vs Gastos</option>
+            <option value="comparative">Comparativa temporal</option>
+            <option value="highest">Mayor movimiento</option>
+            <option value="lowest">Menor movimiento</option>
+            <option value="networth">Balance neto del periodo</option>
+            <option value="savings_rate">Tasa de ahorro</option>
+            <option value="efficiency">Eficiencia financiera</option>
+            <option value="projection">Proyección mensual</option>
+            <option value="cost_optimization">Optimización de Costes</option>
+            <option value="financial_dashboard">Dashboard Financiero</option>
+          </select>
+        </label>
+
+        <label>
+          Tema:
+          <select id="dashboardTheme">
+            <option value="natural" selected>Natural</option>
+            <option value="blue">Azul</option>
+            <option value="green">Verde</option>
+            <option value="orange">Naranja</option>
+            <option value="purple">Morado</option>
+            <option value="dark">Oscuro</option>
+            <option value="red">Rojo</option>
+            <option value="teal">Verde Azulado</option>
+            <option value="gray">Gris</option>
+            <option value="neutral">Neutro</option>
+            <option value="gold">Dorado</option>
+            <option value="rose">Rosa</option>
+            <option value="ocean">Océano</option>
+          </select>
+        </label>
+        <button type="button" id="resetTheme" class="reset-theme"><img src="img/Rehacer.png" alt="Inicio" class="sidebar-icon-img"></button>
+      </div>
+
+      <div class="dashboard-layout">
+        <div class="dashboard-left">
+          <div class="dashboard-cards">
+            <div class="card income-card">
+              <div class="card-icon">💰</div>
+              <div class="card-content">
+                <div class="card-title">Ingresos</div>
+                <div class="card-value" id="dashboardIncome">0 €</div>
+                <div class="card-trend" id="incomeTrend">+0%</div>
+              </div>
+            </div>
+            <div class="card expense-card">
+              <div class="card-icon">💸</div>
+              <div class="card-content">
+                <div class="card-title">Gastos</div>
+                <div class="card-value" id="dashboardExpense">0 €</div>
+                <div class="card-trend" id="expenseTrend">+0%</div>
+              </div>
+            </div>
+            <div class="card balance-card">
+              <div class="card-icon">💎</div>
+              <div class="card-content">
+                <div class="card-title">Saldo</div>
+                <div class="card-value" id="dashboardBalance">0 €</div>
+                <div class="card-trend" id="balanceTrend">+0%</div>
+              </div>
+            </div>
+            <div class="card projection-card">
+              <div class="card-icon">📈</div>
+              <div class="card-content">
+                <div class="card-title">Proyección Mensual</div>
+                <div class="card-value" id="dashboardProjection">0 €</div>
+                <div class="card-trend" id="projectionTrend">+0%</div>
+              </div>
+            </div>
+            <div class="card metric-card">
+              <div class="card-icon">📊</div>
+              <div class="card-content">
+                <div class="card-title">Comparativa Temporal</div>
+                <div class="card-value" id="dashboardMetricValue">0</div>
+                <div class="card-trend" id="metricTrend">+0%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-right">
+          <div class="dashboard-chart">
+            <canvas id="dashboardChart" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  </main>
+
+  <!-- Modal Backup -->
+  <div id="backupModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>💾 Opciones de Backup</h3>
+        <button class="modal-close" id="closeBackupModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="backup-options">
+          <button class="backup-option" data-action="export-json">
+            <span class="backup-icon">📥</span>
+            <span class="backup-text">Exportar datos completos (JSON)</span>
+          </button>
+          <button class="backup-option" data-action="save-local">
+            <span class="backup-icon">💾</span>
+            <span class="backup-text">Guardar copia local</span>
+          </button>
+          <button class="backup-option" data-action="export-excel">
+            <span class="backup-icon">📤</span>
+            <span class="backup-text">Exportar a Excel</span>
+          </button>
+          <button class="backup-option" data-action="export-pdf">
+            <span class="backup-icon">📋</span>
+            <span class="backup-text">Exportar a PDF</span>
+          </button>
+          <button class="backup-option" data-action="save-cloud">
+            <span class="backup-icon">☁️</span>
+            <span class="backup-text">Guardar en nube</span>
+          </button>
+          <button class="backup-option" data-action="schedule-backup">
+            <span class="backup-icon">🔄</span>
+            <span class="backup-text">Programar backup automático</span>
+          </button>
+          <button class="backup-option" data-action="generate-report">
+            <span class="backup-icon">📊</span>
+            <span class="backup-text">Generar reporte completo</span>
+          </button>
+          <button class="backup-option" data-action="config-backup">
+            <span class="backup-icon">⚙️</span>
+            <span class="backup-text">Configurar opciones de backup</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal IA -->
+  <div id="iaModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🤖 Asistente IA - Dashboard</h3>
+        <button class="modal-close" id="closeIAModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="ia-context">
+          <p><strong>Contexto:</strong> Estás en la página de <strong>Dashboard Estadístico</strong></p>
+          <p><strong>Capacidades IA:</strong></p>
+          <ul class="ia-capabilities">
+            <li>📈 Análisis completo de métricas financieras</li>
+            <li>💰 Identificación de tendencias de ingresos/gastos</li>
+            <li>💸 Detección de áreas de optimización</li>
+            <li>🎯 Proyecciones basadas en datos históricos</li>
+            <li>📊 Comparativas entre períodos</li>
+            <li>⚠️ Alertas sobre desviaciones presupuestarias</li>
+            <li>💡 Recomendaciones de mejora financiera</li>
+          </ul>
+        </div>
+        <div class="ia-prompt">
+          <label for="iaPrompt">¿Qué análisis financiero necesitas?</label>
+          <textarea id="iaPrompt" placeholder="Ej: Analiza mis métricas del último trimestre y dame recomendaciones..."></textarea>
+          <button type="button" id="iaSubmit" class="primary-button">Consultar IA</button>
+        </div>
+        <div id="iaResponse" class="ia-response" style="display: none;">
+          <h4>Respuesta IA:</h4>
+          <div id="iaResponseText"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="./node_modules/chart.js/dist/chart.umd.js"></script>
+  <!-- Librerías para exportación profesional -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="firebase-init-simple.js"></script>
+  <script src="app.js"></script>
+  
+  <!-- Script específico de página -->
+  <script>
+    // Contexto IA para esta página
+    const pageContext = {
+      name: 'dashboard',
+      title: 'Dashboard Estadístico',
+      capabilities: [
+        'analisis_completo_metricas',
+        'identificacion_tendencias', 
+        'deteccion_areas_optimizacion',
+        'proyecciones_datos_historicos',
+        'comparativas_periodos',
+        'alertas_desviaciones',
+        'recomendaciones_mejora'
+      ]
+    };
+
+    // Inicializar página
+    document.addEventListener('DOMContentLoaded', function() {
+      // Marcar página activa en sidebar
+      document.querySelectorAll('.sidebar-nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById('sidebarBtnDashboard').classList.add('active');
+      
+      // Configurar eventos específicos de esta página
+      setupPageEvents();
+      
+      // Inicializar dashboard
+      initializeDashboard();
+    });
+
+    function setupPageEvents() {
+      // Eventos del modal Backup
+      const backupBtn = document.getElementById('sidebarBtnBackup');
+      const backupModal = document.getElementById('backupModal');
+      const closeBackupModal = document.getElementById('closeBackupModal');
+      
+      backupBtn.addEventListener('click', () => {
+        backupModal.style.display = 'flex';
+      });
+      
+      closeBackupModal.addEventListener('click', () => {
+        backupModal.style.display = 'none';
+      });
+
+      // Eventos del modal IA
+      const iaBtn = document.getElementById('sidebarBtnAI');
+      const iaModal = document.getElementById('iaModal');
+      const closeIAModal = document.getElementById('closeIAModal');
+      const iaSubmit = document.getElementById('iaSubmit');
+      
+      iaBtn.addEventListener('click', () => {
+        iaModal.style.display = 'flex';
+      });
+      
+      closeIAModal.addEventListener('click', () => {
+        iaModal.style.display = 'none';
+      });
+
+      iaSubmit.addEventListener('click', () => {
+        const prompt = document.getElementById('iaPrompt').value;
+        if (prompt.trim()) {
+          // Simular respuesta IA (aquí iría la llamada real a IA)
+          simulateIAResponse(prompt);
+        }
+      });
+
+      // Eventos de opciones de backup
+      document.querySelectorAll('.backup-option').forEach(option => {
+        option.addEventListener('click', function() {
+          const action = this.dataset.action;
+          handleBackupAction(action);
+        });
+      });
+    }
+
+    function initializeDashboard() {
+      // Inicializar gráfico
+      const ctx = document.getElementById('dashboardChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+          datasets: [{
+            label: 'Ingresos',
+            data: [2800, 2900, 3100, 2950, 3200, 3250],
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1
+          }, {
+            label: 'Gastos',
+            data: [2100, 2200, 2300, 2150, 2250, 2180],
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+
+      // Inicializar valores del dashboard
+      updateDashboardValues();
+    }
+
+    function updateDashboardValues() {
+      // Simular datos financieros
+      document.getElementById('dashboardIncome').textContent = '3,250 €';
+      document.getElementById('dashboardExpense').textContent = '2,180 €';
+      document.getElementById('dashboardBalance').textContent = '1,070 €';
+      document.getElementById('dashboardProjection').textContent = '4,200 €';
+      document.getElementById('dashboardMetricValue').textContent = '87.5%';
+      
+      // Actualizar tendencias
+      document.getElementById('incomeTrend').textContent = '+8.5%';
+      document.getElementById('expenseTrend').textContent = '-3.2%';
+      document.getElementById('balanceTrend').textContent = '+12.7%';
+      document.getElementById('projectionTrend').textContent = '+15.3%';
+      document.getElementById('metricTrend').textContent = '+2.1%';
+    }
+
+    function simulateIAResponse(prompt) {
+      const responseDiv = document.getElementById('iaResponse');
+      const responseText = document.getElementById('iaResponseText');
+      
+      // Simulación de respuesta IA
+      const responses = {
+        'métricas': 'Análisis completo de tus métricas: 📈 Tasa de ahorro: 32.8% (Excelente), 💰 Eficiencia financiera: 87.5% (Muy buena), 💸 Alerta: Gastos en entretenimiento 23% sobre presupuesto. 💡 Recomendación: Considera reducir gastos no esenciales para mejorar tu tasa de ahorro al 35%.',
+        'tendencias': 'Análisis de tendencias: 📈 Ingresos con crecimiento sostenido del 8.5% trimestral, 💸 Gastos con reducción del 3.2%, 🎯 Proyección: Si mantienes esta tendencia, alcanzarás tus metas financieras 6 meses antes.',
+        'optimización': 'Áreas de optimización detectadas: 🚗 Transporte: -15% posible con transporte público, 🍔 Alimentación: -10% con meal prep, 📱 Tecnología: -20% con suscripciones compartidas. 💰 Ahorro potencial: +280€/mes.'
+      };
+      
+      responseText.textContent = responses[prompt.toLowerCase().includes('métricas') ? 'métricas' : 'tendencias'];
+      responseDiv.style.display = 'block';
+    }
+
+    function handleBackupAction(action) {
+      const modal = document.getElementById('backupModal');
+      modal.style.display = 'none';
+      
+      switch(action) {
+        case 'export-json':
+          console.log('Exportando dashboard a JSON...');
+          // Lógica de exportación de dashboard
+          break;
+        case 'save-local':
+          console.log('Guardando copia local del dashboard...');
+          // Lógica de guardado local de dashboard
+          break;
+        case 'export-excel':
+          console.log('Exportando dashboard a Excel...');
+          // Lógica de exportación Excel de dashboard
+          break;
+        case 'export-pdf':
+          console.log('Exportando dashboard a PDF...');
+          // Lógica de exportación PDF de dashboard
+          break;
+        case 'save-cloud':
+          console.log('Guardando dashboard en nube...');
+          // Lógica de guardado en nube de dashboard
+          break;
+        case 'schedule-backup':
+          console.log('Programando backup automático del dashboard...');
+          // Lógica de programación de backup de dashboard
+          break;
+        case 'generate-report':
+          console.log('Generando reporte completo del dashboard...');
+          // Lógica de reporte de dashboard
+          break;
+        case 'config-backup':
+          console.log('Configurando opciones de backup del dashboard...');
+          // Lógica de configuración de backup de dashboard
+          break;
+      }
+    }
+  </script>
+</body>
+</html>

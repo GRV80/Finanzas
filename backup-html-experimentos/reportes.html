@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reportes - App Gastos Pro</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Sidebar Principal -->
+  <aside class="sidebar" id="mainSidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-subtitle" id="toggleSidebar">
+        <img src="img/CF-icon.svg" alt="Control Financiero Profesional" class="nombre-img">
+      </div>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <button class="sidebar-nav-btn" onclick="window.location.href='inicio.html'" id="sidebarBtnInicio">
+        <span class="sidebar-icon">🏠</span>
+        <span class="sidebar-text">Inicio</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='registro.html'" id="sidebarBtnRegistro">
+        <span class="sidebar-icon">📊</span>
+        <span class="sidebar-text">Registro</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='almanaque.html'" id="sidebarBtnAlmanaque">
+        <span class="sidebar-icon">📅</span>
+        <span class="sidebar-text">Almanaque</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='dashboard.html'" id="sidebarBtnDashboard">
+        <span class="sidebar-icon">📈</span>
+        <span class="sidebar-text">Dashboard</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='reuniones.html'" id="sidebarBtnReuniones">
+        <span class="sidebar-icon">💼</span>
+        <span class="sidebar-text">Reuniones</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='tareas.html'" id="sidebarBtnTareas">
+        <span class="sidebar-icon">📝</span>
+        <span class="sidebar-text">Tareas</span>
+      </button>
+      
+      <button class="sidebar-nav-btn active" onclick="window.location.href='reportes.html'" id="sidebarBtnReportes">
+        <span class="sidebar-icon">📊</span>
+        <span class="sidebar-text">Reportes</span>
+      </button>
+      
+      <!-- Botones Globales -->
+      <div class="sidebar-global-buttons">
+        <button class="sidebar-nav-btn ai-btn" id="sidebarBtnAI">
+          <span class="sidebar-icon">🤖</span>
+          <span class="sidebar-text">IA</span>
+        </button>
+        
+        <button class="sidebar-nav-btn backup-btn" id="sidebarBtnBackup">
+          <span class="sidebar-icon">💾</span>
+          <span class="sidebar-text">Backup</span>
+        </button>
+        
+        <div class="sidebar-settings-item">
+          <div class="sidebar-nav-btn config-btn" id="sidebarBtnSettings">
+            <span class="sidebar-icon">⚙️</span>
+            <span class="sidebar-text">Configuración</span>
+          </div>
+          <ul class="settings-sublist" id="settingsSublist">
+            <li><button type="button" id="createShortcutBtn" class="secondary-button">Acceso directo</button></li>
+            <li><button type="button" id="checkUpdatesBtn" class="secondary-button">Actualizar</button></li>
+            <li><button type="button" id="downloadUpdateBtn" class="secondary-button">Descargar</button></li>
+            <li><button type="button" id="installUpdateBtn" class="secondary-button">Instalar</button></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="sidebar-theme-controls">
+        <label>
+          Tema:
+          <select id="headerThemeSelect">
+            <option value="natural" selected>🎨</option>
+            <option value="blue">🔵 Azul</option>
+            <option value="green">🟢 Verde</option>
+            <option value="orange">🟠 Naranja</option>
+            <option value="purple">🟣 Morado</option>
+            <option value="red">🔴 Rojo</option>
+            <option value="teal">🟦 Verde azulado</option>
+            <option value="gray">⚫ Gris</option>
+            <option value="neutral">⚪ Neutro</option>
+            <option value="gold">🟡 Dorado</option>
+            <option value="rose">🌸 Rosa</option>
+            <option value="ocean">🌊 Océano</option>
+            <option value="mint">🟩 Menta</option>
+            <option value="turquoise">🟦 Turquesa</option>
+            <option value="sky">🌥 Cielo</option>
+            <option value="cornflower">🌻 Aciano</option>
+            <option value="steel">⬜ Acero</option>
+            <option value="midnight">🌑 Medianoche</option>
+          </select>
+        </label>
+        <button type="button" id="headerResetTheme" class="secondary-button">
+          <span class="reset-icon">🔄</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Contenido Principal -->
+  <main class="main-content">
+    <section class="panel active" id="reportesPanel">
+      <div class="panel-header">
+        <h2>Generación de Reportes Financieros</h2>
+        <div class="panel-actions">
+          <button type="button" id="btnNewReport">Nuevo Reporte</button>
+          <button type="button" id="btnExportReports">Exportar Todo</button>
+          <button type="button" id="btnImportReports">Importar</button>
+          <button type="button" id="btnClearReports">Vaciar</button>
+          <button type="button" class="panel-toggle" id="toggleReports" title="Mostrar/Ocultar panel de reportes"></button>
+          <input type="file" id="importReportsFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display:none" />
+        </div>
+      </div>
+      <div class="panel-body" id="reportsBody">
+        <div class="reports-controls">
+          <div class="report-filters">
+            <label>
+              Tipo de Reporte:
+              <select id="reportTypeFilter">
+                <option value="">Todos</option>
+                <option value="financiero">📊 Financiero</option>
+                <option value="presupuesto">💰 Presupuesto</option>
+                <option value="inversion">📈 Inversión</option>
+                <option value="ahorro">💎 Ahorro</option>
+                <option value="deuda">💳 Deuda</option>
+                <option value="impuestos">🧾 Impuestos</option>
+                <option value="personalizado">📋 Personalizado</option>
+              </select>
+            </label>
+            <label>
+              Período:
+              <select id="reportPeriodFilter">
+                <option value="">Todos</option>
+                <option value="semana">📅 Esta Semana</option>
+                <option value="mes">📅 Este Mes</option>
+                <option value="trimestre">📅 Este Trimestre</option>
+                <option value="semestre">📅 Este Semestre</option>
+                <option value="año">📅 Este Año</option>
+                <option value="personalizado">📅 Personalizado</option>
+              </select>
+            </label>
+            <label>
+              Formato:
+              <select id="reportFormatFilter">
+                <option value="">Todos</option>
+                <option value="pdf">📋 PDF</option>
+                <option value="excel">📤 Excel</option>
+                <option value="json">📥 JSON</option>
+                <option value="html">🌐 HTML</option>
+                <option value="csv">📊 CSV</option>
+              </select>
+            </label>
+            <button type="button" id="clearReportFilters" class="secondary-button">Limpiar Filtros</button>
+          </div>
+        </div>
+
+        <div class="reports-summary">
+          <div class="summary-card">
+            <h3>📊 Resumen de Reportes</h3>
+            <div class="summary-stats">
+              <div class="stat-item">
+                <span class="stat-label">Total reportes:</span>
+                <span class="stat-value" id="totalReports">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Este mes:</span>
+                <span class="stat-value" id="monthlyReports">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Generados hoy:</span>
+                <span class="stat-value" id="todayReports">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Favoritos:</span>
+                <span class="stat-value" id="favoriteReports">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="reports-list">
+          <h3>📋 Lista de Reportes</h3>
+          <div class="report-actions-row">
+            <button type="button" id="btnSortReportsDate" class="secondary-button">Ordenar por Fecha</button>
+            <button type="button" id="btnSortReportsType" class="secondary-button">Ordenar por Tipo</button>
+            <button type="button" id="btnSortReportsName" class="secondary-button">Ordenar por Nombre</button>
+          </div>
+          
+          <table class="reports-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th>Período</th>
+                <th>Formato</th>
+                <th>Fecha Generación</th>
+                <th>Tamaño</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="reportsTableBody">
+              <!-- Los reportes se cargarán dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modal Nuevo Reporte -->
+    <div id="newReportModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>📊 Nuevo Reporte Financiero</h3>
+          <button class="modal-close" id="closeNewReportModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="newReportForm" class="report-form">
+            <div class="form-row">
+              <label for="reportName">Nombre del Reporte:</label>
+              <input type="text" id="reportName" placeholder="Ej: Reporte Mensual de Gastos" required>
+            </div>
+            <div class="form-row">
+              <label for="reportType">Tipo de Reporte:</label>
+              <select id="reportType" required>
+                <option value="">Seleccionar tipo...</option>
+                <option value="financiero">📊 Reporte Financiero General</option>
+                <option value="presupuesto">💰 Análisis de Presupuesto</option>
+                <option value="inversion">📈 Reporte de Inversiones</option>
+                <option value="ahorro">💎 Reporte de Ahorro</option>
+                <option value="deuda">💳 Reporte de Deudas</option>
+                <option value="impuestos">🧾 Reporte Fiscal</option>
+                <option value="personalizado">📋 Personalizado</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label for="reportPeriod">Período:</label>
+              <select id="reportPeriod" required>
+                <option value="">Seleccionar período...</option>
+                <option value="semana">📅 Esta Semana</option>
+                <option value="mes">📅 Este Mes</option>
+                <option value="trimestre">📅 Este Trimestre</option>
+                <option value="semestre">📅 Este Semestre</option>
+                <option value="año">📅 Este Año</option>
+                <option value="personalizado">📅 Personalizado</option>
+              </select>
+            </div>
+            <div class="form-row" id="customPeriodRow" style="display: none;">
+              <label for="reportStartDate">Fecha Inicio:</label>
+              <input type="date" id="reportStartDate">
+              <label for="reportEndDate">Fecha Fin:</label>
+              <input type="date" id="reportEndDate">
+            </div>
+            <div class="form-row">
+              <label for="reportFormat">Formato de Salida:</label>
+              <select id="reportFormat" required>
+                <option value="">Seleccionar formato...</option>
+                <option value="pdf">📋 PDF</option>
+                <option value="excel">📤 Excel</option>
+                <option value="json">📥 JSON</option>
+                <option value="html">🌐 HTML</option>
+                <option value="csv">📊 CSV</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label for="reportDescription">Descripción:</label>
+              <textarea id="reportDescription" placeholder="Describe el contenido y propósito del reporte..."></textarea>
+            </div>
+            <div class="form-row">
+              <label>
+                <input type="checkbox" id="reportIncludeCharts"> Incluir gráficos
+              </label>
+              <label>
+                <input type="checkbox" id="reportIncludeSummary"> Incluir resumen ejecutivo
+              </label>
+              <label>
+                <input type="checkbox" id="reportIncludeDetails"> Incluir detalles completos
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="button" id="cancelNewReport" class="secondary-button">Cancelar</button>
+              <button type="button" id="previewReport" class="secondary-button">Vista Previa</button>
+              <button type="submit" id="generateReport" class="primary-button">Generar Reporte</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Backup -->
+    <div id="backupModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>💾 Opciones de Backup</h3>
+          <button class="modal-close" id="closeBackupModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="backup-options">
+            <button class="backup-option" data-action="export-json">
+              <span class="backup-icon">📥</span>
+              <span class="backup-text">Exportar datos completos (JSON)</span>
+            </button>
+            <button class="backup-option" data-action="save-local">
+              <span class="backup-icon">💾</span>
+              <span class="backup-text">Guardar copia local</span>
+            </button>
+            <button class="backup-option" data-action="export-excel">
+              <span class="backup-icon">📤</span>
+              <span class="backup-text">Exportar a Excel</span>
+            </button>
+            <button class="backup-option" data-action="export-pdf">
+              <span class="backup-icon">📋</span>
+              <span class="backup-text">Exportar a PDF</span>
+            </button>
+            <button class="backup-option" data-action="save-cloud">
+              <span class="backup-icon">☁️</span>
+              <span class="backup-text">Guardar en nube</span>
+            </button>
+            <button class="backup-option" data-action="schedule-backup">
+              <span class="backup-icon">🔄</span>
+              <span class="backup-text">Programar backup automático</span>
+            </button>
+            <button class="backup-option" data-action="generate-report">
+              <span class="backup-icon">📊</span>
+              <span class="backup-text">Generar reporte completo</span>
+            </button>
+            <button class="backup-option" data-action="config-backup">
+              <span class="backup-icon">⚙️</span>
+              <span class="backup-text">Configurar opciones de backup</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal IA -->
+    <div id="iaModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🤖 Asistente IA - Reportes</h3>
+          <button class="modal-close" id="closeIAModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="ia-context">
+            <p><strong>Contexto:</strong> Estás en la página de <strong>Generación de Reportes Financieros</strong></p>
+            <p><strong>Capacidades IA:</strong></p>
+            <ul class="ia-capabilities">
+              <li>📊 Generar reportes financieros automáticos</li>
+              <li>💰 Analizar tendencias y patrones de gastos</li>
+              <li>📈 Crear proyecciones y escenarios financieros</li>
+              <li>🎯 Sugerir optimizaciones de presupuesto</li>
+              <li>📋 Personalizar reportes según necesidades específicas</li>
+              <li>⚠️ Identificar anomalías y riesgos financieros</li>
+              <li>🎯 Recomendar métricas clave de rendimiento (KPIs)</li>
+            </ul>
+          </div>
+          <div class="ia-prompt">
+            <label for="iaPrompt">¿Qué tipo de reporte financiero necesitas generar?</label>
+            <textarea id="iaPrompt" placeholder="Ej: Genera un reporte mensual de gastos con análisis de tendencias..."></textarea>
+            <button type="button" id="iaSubmit" class="primary-button">Generar con IA</button>
+          </div>
+          <div id="iaResponse" class="ia-response" style="display: none;">
+            <h4>Respuesta IA:</h4>
+            <div id="iaResponseText"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../node_modules/chart.js/dist/chart.umd.js"></script>
+  <!-- Librerías para exportación profesional -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="../firebase-init-simple.js"></script>
+  <script src="../app.js"></script>
+  
+  <!-- Script específico de página -->
+  <script>
+    // Contexto IA para esta página
+    const pageContext = {
+      name: 'reportes',
+      title: 'Generación de Reportes Financieros',
+      capabilities: [
+        'generar_reportes_automaticos',
+        'analizar_tendencias_patrones', 
+        'crear_proyecciones_escenarios',
+        'sugerir_optimizaciones_presupuesto',
+        'personalizar_reportes',
+        'identificar_anomalias_riesgos',
+        'recomendar_kpis_financieros'
+      ]
+    };
+
+    // Datos de ejemplo
+    let reports = [
+      {
+        id: 1,
+        name: 'Reporte Mensual de Gastos',
+        type: 'financiero',
+        period: 'mes',
+        format: 'pdf',
+        date: '2026-04-20',
+        size: '2.4 MB',
+        status: 'completado'
+      },
+      {
+        id: 2,
+        name: 'Análisis de Presupuesto Q1',
+        type: 'presupuesto',
+        period: 'trimestre',
+        format: 'excel',
+        date: '2026-04-15',
+        size: '1.8 MB',
+        status: 'completado'
+      }
+    ];
+
+    // Inicializar página
+    document.addEventListener('DOMContentLoaded', function() {
+      // Marcar página activa en sidebar
+      document.querySelectorAll('.sidebar-nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById('sidebarBtnReportes').classList.add('active');
+      
+      // Configurar eventos específicos de esta página
+      setupPageEvents();
+      
+      // Inicializar datos
+      renderReportsTable();
+      updateReportsSummary();
+    });
+
+    function setupPageEvents() {
+      // Eventos del modal Nuevo Reporte
+      const newReportBtn = document.getElementById('btnNewReport');
+      const newReportModal = document.getElementById('newReportModal');
+      const closeNewReportModal = document.getElementById('closeNewReportModal');
+      const cancelNewReport = document.getElementById('cancelNewReport');
+      const generateReport = document.getElementById('generateReport');
+      const previewReport = document.getElementById('previewReport');
+      const reportPeriod = document.getElementById('reportPeriod');
+      const customPeriodRow = document.getElementById('customPeriodRow');
+      
+      newReportBtn.addEventListener('click', () => {
+        newReportModal.style.display = 'flex';
+      });
+      
+      closeNewReportModal.addEventListener('click', () => {
+        newReportModal.style.display = 'none';
+      });
+      
+      cancelNewReport.addEventListener('click', () => {
+        newReportModal.style.display = 'none';
+      });
+      
+      reportPeriod.addEventListener('change', (e) => {
+        if (e.target.value === 'personalizado') {
+          customPeriodRow.style.display = 'flex';
+        } else {
+          customPeriodRow.style.display = 'none';
+        }
+      });
+      
+      generateReport.addEventListener('click', (e) => {
+        e.preventDefault();
+        generateNewReport();
+      });
+
+      previewReport.addEventListener('click', (e) => {
+        e.preventDefault();
+        previewNewReport();
+      });
+
+      // Eventos de filtros
+      const filters = ['reportTypeFilter', 'reportPeriodFilter', 'reportFormatFilter'];
+      filters.forEach(filterId => {
+        document.getElementById(filterId).addEventListener('change', () => {
+          renderReportsTable();
+          updateReportsSummary();
+        });
+      });
+
+      document.getElementById('clearReportFilters').addEventListener('click', () => {
+        filters.forEach(filterId => {
+          document.getElementById(filterId).value = '';
+        });
+        renderReportsTable();
+        updateReportsSummary();
+      });
+
+      // Eventos de ordenamiento
+      document.getElementById('btnSortReportsDate').addEventListener('click', () => {
+        reports.sort((a, b) => new Date(b.date) - new Date(a.date));
+        renderReportsTable();
+      });
+
+      document.getElementById('btnSortReportsType').addEventListener('click', () => {
+        reports.sort((a, b) => a.type.localeCompare(b.type));
+        renderReportsTable();
+      });
+
+      document.getElementById('btnSortReportsName').addEventListener('click', () => {
+        reports.sort((a, b) => a.name.localeCompare(b.name));
+        renderReportsTable();
+      });
+
+      // Eventos del modal Backup
+      const backupBtn = document.getElementById('sidebarBtnBackup');
+      const backupModal = document.getElementById('backupModal');
+      const closeBackupModal = document.getElementById('closeBackupModal');
+      
+      backupBtn.addEventListener('click', () => {
+        backupModal.style.display = 'flex';
+      });
+      
+      closeBackupModal.addEventListener('click', () => {
+        backupModal.style.display = 'none';
+      });
+
+      // Eventos del modal IA
+      const iaBtn = document.getElementById('sidebarBtnAI');
+      const iaModal = document.getElementById('iaModal');
+      const closeIAModal = document.getElementById('closeIAModal');
+      const iaSubmit = document.getElementById('iaSubmit');
+      
+      iaBtn.addEventListener('click', () => {
+        iaModal.style.display = 'flex';
+      });
+      
+      closeIAModal.addEventListener('click', () => {
+        iaModal.style.display = 'none';
+      });
+
+      iaSubmit.addEventListener('click', () => {
+        const prompt = document.getElementById('iaPrompt').value;
+        if (prompt.trim()) {
+          // Simular respuesta IA (aquí iría la llamada real a IA)
+          simulateIAResponse(prompt);
+        }
+      });
+
+      // Eventos de opciones de backup
+      document.querySelectorAll('.backup-option').forEach(option => {
+        option.addEventListener('click', function() {
+          const action = this.dataset.action;
+          handleBackupAction(action);
+        });
+      });
+    }
+
+    function renderReportsTable() {
+      const tbody = document.getElementById('reportsTableBody');
+      const typeFilter = document.getElementById('reportTypeFilter').value;
+      const periodFilter = document.getElementById('reportPeriodFilter').value;
+      const formatFilter = document.getElementById('reportFormatFilter').value;
+      
+      let filteredReports = reports.filter(report => {
+        if (typeFilter && report.type !== typeFilter) return false;
+        if (periodFilter && report.period !== periodFilter) return false;
+        if (formatFilter && report.format !== formatFilter) return false;
+        return true;
+      });
+      
+      tbody.innerHTML = '';
+      filteredReports.forEach(report => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${report.name}</td>
+          <td><span class="report-type-badge">${getReportTypeLabel(report.type)}</span></td>
+          <td>${getPeriodLabel(report.period)}</td>
+          <td><span class="report-format-badge">${getFormatLabel(report.format)}</span></td>
+          <td>${report.date}</td>
+          <td>${report.size}</td>
+          <td><span class="report-status-badge status-${report.status}">${getStatusLabel(report.status)}</span></td>
+          <td>
+            <button class="action-btn" onclick="downloadReport(${report.id})">⬇️</button>
+            <button class="action-btn" onclick="viewReport(${report.id})">👁️</button>
+            <button class="action-btn" onclick="editReport(${report.id})">✏️</button>
+            <button class="action-btn" onclick="deleteReport(${report.id})">🗑️</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function updateReportsSummary() {
+      const total = reports.length;
+      const monthly = reports.filter(r => {
+        const reportDate = new Date(r.date);
+        const today = new Date();
+        return reportDate.getMonth() === today.getMonth() && reportDate.getFullYear() === today.getFullYear();
+      }).length;
+      const today = reports.filter(r => {
+        const reportDate = new Date(r.date);
+        const today = new Date();
+        return reportDate.toDateString() === today.toDateString();
+      }).length;
+      const favorites = reports.filter(r => r.favorite).length;
+      
+      document.getElementById('totalReports').textContent = total;
+      document.getElementById('monthlyReports').textContent = monthly;
+      document.getElementById('todayReports').textContent = today;
+      document.getElementById('favoriteReports').textContent = favorites;
+    }
+
+    function getReportTypeLabel(type) {
+      const labels = {
+        'financiero': '📊 Financiero',
+        'presupuesto': '💰 Presupuesto',
+        'inversion': '📈 Inversión',
+        'ahorro': '💎 Ahorro',
+        'deuda': '💳 Deuda',
+        'impuestos': '🧾 Impuestos',
+        'personalizado': '📋 Personalizado'
+      };
+      return labels[type] || type;
+    }
+
+    function getPeriodLabel(period) {
+      const labels = {
+        'semana': '📅 Esta Semana',
+        'mes': '📅 Este Mes',
+        'trimestre': '📅 Este Trimestre',
+        'semestre': '📅 Este Semestre',
+        'año': '📅 Este Año',
+        'personalizado': '📅 Personalizado'
+      };
+      return labels[period] || period;
+    }
+
+    function getFormatLabel(format) {
+      const labels = {
+        'pdf': '📋 PDF',
+        'excel': '📤 Excel',
+        'json': '📥 JSON',
+        'html': '🌐 HTML',
+        'csv': '📊 CSV'
+      };
+      return labels[format] || format;
+    }
+
+    function getStatusLabel(status) {
+      const labels = {
+        'completado': '✅ Completado',
+        'generando': '🔄 Generando',
+        'error': '❌ Error',
+        'cancelado': '⏹️ Cancelado'
+      };
+      return labels[status] || status;
+    }
+
+    function generateNewReport() {
+      const report = {
+        name: document.getElementById('reportName').value,
+        type: document.getElementById('reportType').value,
+        period: document.getElementById('reportPeriod').value,
+        format: document.getElementById('reportFormat').value,
+        description: document.getElementById('reportDescription').value,
+        includeCharts: document.getElementById('reportIncludeCharts').checked,
+        includeSummary: document.getElementById('reportIncludeSummary').checked,
+        includeDetails: document.getElementById('reportIncludeDetails').checked,
+        date: new Date().toISOString().split('T')[0],
+        size: 'Calculando...',
+        status: 'generando'
+      };
+      
+      if (report.period === 'personalizado') {
+        report.startDate = document.getElementById('reportStartDate').value;
+        report.endDate = document.getElementById('reportEndDate').value;
+      }
+      
+      console.log('Generando reporte:', report);
+      
+      // Simular generación
+      setTimeout(() => {
+        report.status = 'completado';
+        report.size = Math.floor(Math.random() * 5) + 1 + '.' + Math.floor(Math.random() * 9) + ' MB';
+        reports.push(report);
+        renderReportsTable();
+        updateReportsSummary();
+      }, 2000);
+      
+      // Cerrar modal
+      document.getElementById('newReportModal').style.display = 'none';
+      
+      // Limpiar formulario
+      document.getElementById('newReportForm').reset();
+    }
+
+    function previewNewReport() {
+      console.log('Generando vista previa del reporte...');
+      // Aquí iría la lógica de vista previa
+    }
+
+    function simulateIAResponse(prompt) {
+      const responseDiv = document.getElementById('iaResponse');
+      const responseText = document.getElementById('iaResponseText');
+      
+      // Simulación de respuesta IA
+      const responses = {
+        'mensual': 'He generado un reporte financiero mensual completo: 📊 Análisis de gastos por categoría, 💰 Comparativa ingresos vs gastos, 📈 Tendencias del último año, 🎯 Recomendaciones de optimización.',
+        'presupuesto': 'Reporte de presupuesto generado: 📊 Cumplimiento del presupuesto actual: 87%, 💰 Áreas con sobregasto: Entretenimiento (+23%), Transporte (+15%), 🎯 Sugerencias: Reducir gastos no esenciales en 10%.'
+      };
+      
+      responseText.textContent = responses[prompt.toLowerCase().includes('mensual') ? 'mensual' : 'presupuesto';
+      responseDiv.style.display = 'block';
+    }
+
+    function handleBackupAction(action) {
+      const modal = document.getElementById('backupModal');
+      modal.style.display = 'none';
+      
+      switch(action) {
+        case 'export-json':
+          console.log('Exportando reportes a JSON...');
+          // Lógica de exportación de reportes
+          break;
+        case 'save-local':
+          console.log('Guardando copia local de reportes...');
+          // Lógica de guardado local de reportes
+          break;
+        case 'export-excel':
+          console.log('Exportando reportes a Excel...');
+          // Lógica de exportación Excel de reportes
+          break;
+        case 'export-pdf':
+          console.log('Exportando reportes a PDF...');
+          // Lógica de exportación PDF de reportes
+          break;
+        case 'save-cloud':
+          console.log('Guardando reportes en nube...');
+          // Lógica de guardado en nube de reportes
+          break;
+        case 'schedule-backup':
+          console.log('Programando backup automático de reportes...');
+          // Lógica de programación de backup de reportes
+          break;
+        case 'generate-report':
+          console.log('Generando reporte completo de reportes...');
+          // Lógica de reporte de reportes
+          break;
+        case 'config-backup':
+          console.log('Configurando opciones de backup de reportes...');
+          // Lógica de configuración de backup de reportes
+          break;
+      }
+    }
+
+    function downloadReport(id) {
+      console.log('Descargando reporte:', id);
+      // Aquí iría la lógica de descarga
+    }
+
+    function viewReport(id) {
+      console.log('Visualizando reporte:', id);
+      // Aquí iría la lógica de visualización
+    }
+
+    function editReport(id) {
+      console.log('Editando reporte:', id);
+      // Aquí iría la lógica de edición
+    }
+
+    function deleteReport(id) {
+      reports = reports.filter(r => r.id !== id);
+      renderReportsTable();
+      updateReportsSummary();
+      console.log('Reporte eliminado:', id);
+    }
+  </script>
+</body>
+</html>

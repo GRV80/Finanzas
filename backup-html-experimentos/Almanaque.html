@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Almanaque - App Gastos Pro</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Sidebar Principal -->
+  <aside class="sidebar" id="mainSidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-subtitle" id="toggleSidebar">
+        <img src="img/CF-icon.svg" alt="Control Financiero Profesional" class="nombre-img">
+      </div>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <button class="sidebar-nav-btn" onclick="window.location.href='inicio.html'" id="sidebarBtnInicio">
+        <span class="sidebar-icon">🏠</span>
+        <span class="sidebar-text">Inicio</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='registro.html'" id="sidebarBtnRegistro">
+        <span class="sidebar-icon">📊</span>
+        <span class="sidebar-text">Registro</span>
+      </button>
+      
+      <button class="sidebar-nav-btn active" onclick="window.location.href='almanaque.html'" id="sidebarBtnAlmanaque">
+        <span class="sidebar-icon">📅</span>
+        <span class="sidebar-text">Almanaque</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='dashboard.html'" id="sidebarBtnDashboard">
+        <span class="sidebar-icon">📈</span>
+        <span class="sidebar-text">Dashboard</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='reuniones.html'" id="sidebarBtnReuniones">
+        <span class="sidebar-icon">💼</span>
+        <span class="sidebar-text">Reuniones</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='tareas.html'" id="sidebarBtnTasks">
+        <span class="sidebar-icon">📝</span>
+        <span class="sidebar-text">Tareas</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='reportes.html'" id="sidebarBtnReports">
+        <span class="sidebar-icon">📊</span>
+        <span class="sidebar-text">Reportes</span>
+      </button>
+      
+      <!-- Botones Globales -->
+      <div class="sidebar-global-buttons">
+        <button class="sidebar-nav-btn ai-btn" id="sidebarBtnAI">
+          <span class="sidebar-icon">🤖</span>
+          <span class="sidebar-text">IA</span>
+        </button>
+        
+        <button class="sidebar-nav-btn backup-btn" id="sidebarBtnBackup">
+          <span class="sidebar-icon">💾</span>
+          <span class="sidebar-text">Backup</span>
+        </button>
+        
+        <div class="sidebar-settings-item">
+          <div class="sidebar-nav-btn config-btn" id="sidebarBtnSettings">
+            <span class="sidebar-icon">⚙️</span>
+            <span class="sidebar-text">Configuración</span>
+          </div>
+          <ul class="settings-sublist" id="settingsSublist">
+            <li><button type="button" id="createShortcutBtn" class="secondary-button">Acceso directo</button></li>
+            <li><button type="button" id="checkUpdatesBtn" class="secondary-button">Actualizar</button></li>
+            <li><button type="button" id="downloadUpdateBtn" class="secondary-button">Descargar</button></li>
+            <li><button type="button" id="installUpdateBtn" class="secondary-button">Instalar</button></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="sidebar-theme-controls">
+        <label>
+          Tema:
+          <select id="headerThemeSelect">
+            <option value="natural" selected>🎨</option>
+            <option value="blue">🔵 Azul</option>
+            <option value="green">🟢 Verde</option>
+            <option value="orange">🟠 Naranja</option>
+            <option value="purple">🟣 Morado</option>
+            <option value="red">🔴 Rojo</option>
+            <option value="teal">🟦 Verde azulado</option>
+            <option value="gray">⚫ Gris</option>
+            <option value="neutral">⚪ Neutro</option>
+            <option value="gold">🟡 Dorado</option>
+            <option value="rose">🌸 Rosa</option>
+            <option value="ocean">🌊 Océano</option>
+            <option value="mint">🟩 Menta</option>
+            <option value="turquoise">🟦 Turquesa</option>
+            <option value="sky">🌥 Cielo</option>
+            <option value="cornflower">🌻 Aciano</option>
+            <option value="steel">⬜ Acero</option>
+            <option value="midnight">🌑 Medianoche</option>
+          </select>
+        </label>
+        <button type="button" id="headerResetTheme" class="secondary-button">
+          <span class="reset-icon">🔄</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Contenido Principal -->
+  <main class="main-content">
+    <section class="panel active" id="almanaquePanel">
+      <div class="panel-header">
+        <h2>📅 Almanaque</h2>
+        <div class="panel-actions">
+          <button type="button" id="btnExportAlmanaque">Exportar</button>
+          <button type="button" id="btnImportAlmanaque">Importar</button>
+          <button type="button" id="btnClearAlmanaque">Vaciar</button>
+          <button type="button" class="panel-toggle" id="toggleAlmanaque" title="Mostrar/Ocultar panel de almanaque"></button>
+          <input type="file" id="importAlmanaqueFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display:none" />
+        </div>
+      </div>
+      <div class="panel-body" id="almanaquePanel">
+        <div class="almanaque-controls">
+          <label>
+            Vista:
+            <select id="almanaqueViewMode">
+              <option value="year">Todo el año</option>
+              <option value="month" selected>Todo el mes</option>
+              <option value="day">Día</option>
+            </select>
+          </label>
+          <label>
+            Año:
+            <select id="almanaqueYear"></select>
+          </label>
+          <label>
+            Mes:
+            <select id="almanaqueMonth"></select>
+          </label>
+          <label>
+            Día:
+            <select id="almanaqueDay"></select>
+          </label>
+          <label>
+            Tipo:
+            <select id="almanaqueTypeFilter">
+              <option value="">Todos</option>
+              <option value="Ingreso">Ingresos</option>
+              <option value="Gasto">Gastos</option>
+            </select>
+          </label>
+          <button type="button" id="almanaqueViewDay" class="small">Ver</button>
+          <input type="file" id="almanaqueAttachmentFile" multiple style="display:none" />
+        </div>
+
+        <div class="entries-summary" id="almanaqueSummary">Mostrando todos los movimientos del mes seleccionado.</div>
+
+        <div id="almanaqueDayDetails" class="almanaque-day-details" style="display:none; margin-bottom:12px;">
+          <div>
+            <strong>Movimientos del día:</strong>
+            <input type="date" id="selectedDayInput" />
+            <button type="button" id="applySelectedDay" class="small">Ver</button>
+            <button type="button" id="exportDayAttachments" class="small">Exportar adjuntos</button>
+          </div>
+          <div id="selectedDayList" class="selected-day-table-wrap"></div>
+          <button type="button" id="clearDayView" class="small">Limpiar vista diaria</button>
+        </div>
+
+        <table class="almanaque-table">
+          <thead>
+            <tr>
+              <th>N</th>
+              <th>Tipo</th>
+              <th>Fecha / Hora</th>
+              <th>Nombre</th>
+              <th>Categoría</th>
+              <th>Descripción</th>
+              <th>Precio/Total</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="almanaqueBody"></tbody>
+        </table>
+        <div class="totals">
+          <div>Ingresos: <span id="almanaque-income">0</span> €</div>
+          <div>Gastos: <span id="almanaque-expense">0</span> €</div>
+          <div>Saldo: <span id="almanaque-total">0</span> €</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal Backup -->
+  <div id="backupModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>💾 Opciones de Backup</h3>
+        <button class="modal-close" id="closeBackupModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="backup-options">
+          <button class="backup-option" data-action="export-json">
+            <span class="backup-icon">📥</span>
+            <span class="backup-text">Exportar datos completos (JSON)</span>
+          </button>
+          <button class="backup-option" data-action="save-local">
+            <span class="backup-icon">💾</span>
+            <span class="backup-text">Guardar copia local</span>
+          </button>
+          <button class="backup-option" data-action="export-excel">
+            <span class="backup-icon">📤</span>
+            <span class="backup-text">Exportar a Excel</span>
+          </button>
+          <button class="backup-option" data-action="export-pdf">
+            <span class="backup-icon">📋</span>
+            <span class="backup-text">Exportar a PDF</span>
+          </button>
+          <button class="backup-option" data-action="save-cloud">
+            <span class="backup-icon">☁️</span>
+            <span class="backup-text">Guardar en nube</span>
+          </button>
+          <button class="backup-option" data-action="schedule-backup">
+            <span class="backup-icon">🔄</span>
+            <span class="backup-text">Programar backup automático</span>
+          </button>
+          <button class="backup-option" data-action="generate-report">
+            <span class="backup-icon">📊</span>
+            <span class="backup-text">Generar reporte completo</span>
+          </button>
+          <button class="backup-option" data-action="config-backup">
+            <span class="backup-icon">⚙️</span>
+            <span class="backup-text">Configurar opciones de backup</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal IA -->
+  <div id="iaModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🤖 Asistente IA - Almanaque</h3>
+        <button class="modal-close" id="closeIAModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="ia-context">
+          <p><strong>Contexto:</strong> Estás en la página de <strong>Almanaque Histórico</strong></p>
+          <p><strong>Capacidades IA:</strong></p>
+          <ul class="ia-capabilities">
+            <li>📅 Analizar tendencias temporales de gastos</li>
+            <li>📈 Identificar patrones estacionales</li>
+            <li>🎯 Proyectar gastos futuros basados en historial</li>
+            <li>💡 Sugerir optimizaciones de presupuesto temporal</li>
+            <li>📊 Generar análisis comparativos entre períodos</li>
+            <li>⚠️ Detectar anomalías o gastos inusuales</li>
+            <li>📋 Crear resúmenes históricos automáticos</li>
+          </ul>
+        </div>
+        <div class="ia-prompt">
+          <label for="iaPrompt">¿Qué análisis histórico necesitas?</label>
+          <textarea id="iaPrompt" placeholder="Ej: Analiza mis gastos del último trimestre y dame predicciones..."></textarea>
+          <button type="button" id="iaSubmit" class="primary-button">Consultar IA</button>
+        </div>
+        <div id="iaResponse" class="ia-response" style="display: none;">
+          <h4>Respuesta IA:</h4>
+          <div id="iaResponseText"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="./node_modules/chart.js/dist/chart.umd.js"></script>
+  <!-- Librerías para exportación profesional -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="firebase-init-simple.js"></script>
+  <script src="app.js"></script>
+  
+  <!-- Script específico de página -->
+  <script>
+    // Contexto IA para esta página
+    const pageContext = {
+      name: 'almanaque',
+      title: 'Almanaque Histórico',
+      capabilities: [
+        'analizar_tendencias_temporales',
+        'identificar_patrones_estacionales', 
+        'proyectar_gastos_futuros',
+        'sugerir_optimizaciones_temporales',
+        'generar_analisis_comparativos',
+        'detectar_anomalias_gastos',
+        'crear_resumenes_historicos'
+      ]
+    };
+
+    // Inicializar página
+    document.addEventListener('DOMContentLoaded', function() {
+      // Marcar página activa en sidebar
+      document.querySelectorAll('.sidebar-nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById('sidebarBtnAlmanaque').classList.add('active');
+      
+      // Configurar eventos específicos de esta página
+      setupPageEvents();
+    });
+
+    function setupPageEvents() {
+      // Eventos del modal Backup
+      const backupBtn = document.getElementById('sidebarBtnBackup');
+      const backupModal = document.getElementById('backupModal');
+      const closeBackupModal = document.getElementById('closeBackupModal');
+      
+      backupBtn.addEventListener('click', () => {
+        backupModal.style.display = 'flex';
+      });
+      
+      closeBackupModal.addEventListener('click', () => {
+        backupModal.style.display = 'none';
+      });
+
+      // Eventos del modal IA
+      const iaBtn = document.getElementById('sidebarBtnAI');
+      const iaModal = document.getElementById('iaModal');
+      const closeIAModal = document.getElementById('closeIAModal');
+      const iaSubmit = document.getElementById('iaSubmit');
+      
+      iaBtn.addEventListener('click', () => {
+        iaModal.style.display = 'flex';
+      });
+      
+      closeIAModal.addEventListener('click', () => {
+        iaModal.style.display = 'none';
+      });
+
+      iaSubmit.addEventListener('click', () => {
+        const prompt = document.getElementById('iaPrompt').value;
+        if (prompt.trim()) {
+          // Simular respuesta IA (aquí iría la llamada real a IA)
+          simulateIAResponse(prompt);
+        }
+      });
+
+      // Eventos de opciones de backup
+      document.querySelectorAll('.backup-option').forEach(option => {
+        option.addEventListener('click', function() {
+          const action = this.dataset.action;
+          handleBackupAction(action);
+        });
+      });
+    }
+
+    function simulateIAResponse(prompt) {
+      const responseDiv = document.getElementById('iaResponse');
+      const responseText = document.getElementById('iaResponseText');
+      
+      // Simulación de respuesta IA
+      const responses = {
+        'tendencias': 'Análisis de tendencias: 📈 Tus gastos han aumentado 12% en los últimos 3 meses, principalmente en categorías de transporte y alimentación. 🎯 Proyección: Si continúa esta tendencia, gastarás ~15% más el próximo trimestre.',
+        'patrones': 'Patrones estacionales detectados: 🍔 Diciembre: +45% en regalos, 🏖 Enero: +30% en vacaciones, 📅 Agosto: +25% en útiles escolares. 💡 Recomendación: Prepara presupuesto para estos picos estacionales.',
+        'comparativo': 'Análisis comparativo: 📊 Q1 vs Q2: Ingresos +8%, Gastos +15%. ⚠️ Alerta: Tu tasa de ahorro disminuyó del 22% al 18%. Considera revisar categorías no esenciales.'
+      };
+      
+      responseText.textContent = responses[prompt.toLowerCase().includes('tendencias') ? 'tendencias' : 'patrones'];
+      responseDiv.style.display = 'block';
+    }
+
+    function handleBackupAction(action) {
+      const modal = document.getElementById('backupModal');
+      modal.style.display = 'none';
+      
+      switch(action) {
+        case 'export-json':
+          console.log('Exportando almanaque a JSON...');
+          // Lógica de exportación de almanaque
+          break;
+        case 'save-local':
+          console.log('Guardando copia local del almanaque...');
+          // Lógica de guardado local de almanaque
+          break;
+        case 'export-excel':
+          console.log('Exportando almanaque a Excel...');
+          // Lógica de exportación Excel de almanaque
+          break;
+        case 'export-pdf':
+          console.log('Exportando almanaque a PDF...');
+          // Lógica de exportación PDF de almanaque
+          break;
+        case 'save-cloud':
+          console.log('Guardando almanaque en nube...');
+          // Lógica de guardado en nube de almanaque
+          break;
+        case 'schedule-backup':
+          console.log('Programando backup automático del almanaque...');
+          // Lógica de programación de backup de almanaque
+          break;
+        case 'generate-report':
+          console.log('Generando reporte completo del almanaque...');
+          // Lógica de reporte de almanaque
+          break;
+        case 'config-backup':
+          console.log('Configurando opciones de backup del almanaque...');
+          // Lógica de configuración de backup de almanaque
+          break;
+      }
+    }
+  </script>
+</body>
+</html>

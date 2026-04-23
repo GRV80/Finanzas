@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro - App Gastos Pro</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Sidebar Principal -->
+  <aside class="sidebar" id="mainSidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-subtitle" id="toggleSidebar">
+        <img src="img/CF-icon.svg" alt="Control Financiero Profesional" class="nombre-img">
+      </div>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <button class="sidebar-nav-btn" onclick="window.location.href='inicio.html'" id="sidebarBtnInicio">
+        <span class="sidebar-icon">🏠</span>
+        <span class="sidebar-text">Inicio</span>
+      </button>
+      
+      <button class="sidebar-nav-btn active" onclick="window.location.href='registro.html'" id="sidebarBtnRegistro">
+        <span class="sidebar-icon">📊</span>
+        <span class="sidebar-text">Registro</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='almanaque.html'" id="sidebarBtnAlmanaque">
+        <span class="sidebar-icon">📅</span>
+        <span class="sidebar-text">Almanaque</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='dashboard.html'" id="sidebarBtnDashboard">
+        <span class="sidebar-icon">📈</span>
+        <span class="sidebar-text">Dashboard</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='reuniones.html'" id="sidebarBtnReuniones">
+        <span class="sidebar-icon">💼</span>
+        <span class="sidebar-text">Reuniones</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='tareas.html'" id="sidebarBtnTasks">
+        <span class="sidebar-icon">📝</span>
+        <span class="sidebar-text">Tareas</span>
+      </button>
+      
+      <button class="sidebar-nav-btn" onclick="window.location.href='reportes.html'" id="sidebarBtnReports">
+        <span class="sidebar-icon">📊</span>
+        <span class="sidebar-text">Reportes</span>
+      </button>
+      
+      <!-- Botones Globales -->
+      <div class="sidebar-global-buttons">
+        <button class="sidebar-nav-btn ai-btn" id="sidebarBtnAI">
+          <span class="sidebar-icon">🤖</span>
+          <span class="sidebar-text">IA</span>
+        </button>
+        
+        <button class="sidebar-nav-btn backup-btn" id="sidebarBtnBackup">
+          <span class="sidebar-icon">💾</span>
+          <span class="sidebar-text">Backup</span>
+        </button>
+        
+        <div class="sidebar-settings-item">
+          <div class="sidebar-nav-btn config-btn" id="sidebarBtnSettings">
+            <span class="sidebar-icon">⚙️</span>
+            <span class="sidebar-text">Configuración</span>
+          </div>
+          <ul class="settings-sublist" id="settingsSublist">
+            <li><button type="button" id="createShortcutBtn" class="secondary-button">Acceso directo</button></li>
+            <li><button type="button" id="checkUpdatesBtn" class="secondary-button">Actualizar</button></li>
+            <li><button type="button" id="downloadUpdateBtn" class="secondary-button">Descargar</button></li>
+            <li><button type="button" id="installUpdateBtn" class="secondary-button">Instalar</button></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="sidebar-theme-controls">
+        <label>
+          Tema:
+          <select id="headerThemeSelect">
+            <option value="natural" selected>🎨</option>
+            <option value="blue">🔵 Azul</option>
+            <option value="green">🟢 Verde</option>
+            <option value="orange">🟠 Naranja</option>
+            <option value="purple">🟣 Morado</option>
+            <option value="red">🔴 Rojo</option>
+            <option value="teal">🟦 Verde azulado</option>
+            <option value="gray">⚫ Gris</option>
+            <option value="neutral">⚪ Neutro</option>
+            <option value="gold">🟡 Dorado</option>
+            <option value="rose">🌸 Rosa</option>
+            <option value="ocean">🌊 Océano</option>
+            <option value="mint">🟩 Menta</option>
+            <option value="turquoise">🟦 Turquesa</option>
+            <option value="sky">🌥 Cielo</option>
+            <option value="cornflower">🌻 Aciano</option>
+            <option value="steel">⬜ Acero</option>
+            <option value="midnight">🌑 Medianoche</option>
+          </select>
+        </label>
+        <button type="button" id="headerResetTheme" class="secondary-button">
+          <span class="reset-icon">🔄</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Contenido Principal -->
+  <main class="main-content">
+    <section class="panel active" id="registroPanel">
+      <div class="panel-header">
+        <div>
+          <h2>📊 Registro de la Contabilidad</h2>
+        </div>
+        <div class="panel-actions">
+          <button type="button" id="btnExport">Exportar</button>
+          <button type="button" id="btnImport">Importar</button>
+          <button type="button" id="btnRestore" class="secondary-button" title="Restablecer">↻</button>
+          <button type="button" id="btnClear">Vaciar</button>
+          <button type="button" class="panel-toggle" id="toggleEntries" title="Mostrar/Ocultar panel de registro"></button>
+          <input type="file" id="importFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display:none" />
+        </div>
+      </div>
+      <div class="panel-body" id="entriesBody">
+        <div class="entry-capture-panel">
+          <div class="entry-capture-head">
+            <div id="entryFormLabels" class="entry-form-labels"></div>
+          </div>
+          <form id="gastosForm" class="entry-form-row"><input type="file" id="importAlmanaqueFile" accept=".json,.csv,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple style="display: none;">
+          </form>
+          <div id="formFeedback" class="form-feedback entry-feedback" hidden></div>
+          
+        </div>
+      <div class="entries-toolbar">
+        <div class="entry-controls-row">
+          <input type="text" id="newColumnName" placeholder="Nueva columna.." autocomplete="off">
+          <button type="button" id="btnAddColumn">Agregar columna</button>
+          <button type="button" id="btnAddRow">Nueva fila</button>
+          <button type="button" id="btnUndo" style="display: none;">Deshacer</button>
+        </div>
+
+        <div class="date-filter-pills" id="filterDateMode">
+          <button type="button" class="date-filter-pill is-active" data-mode="all">Todos</button>
+          <button type="button" class="date-filter-pill" data-mode="day">Día</button>
+          <button type="button" class="date-filter-pill" data-mode="month">Mes</button>
+          <button type="button" class="date-filter-pill" data-mode="year">Año</button>
+        </div>
+        <select id="filterDay">
+          <option value="">Día</option>
+        </select>
+        <select id="filterMonth">
+          <option value="">Mes</option>
+        </select>
+        <select id="filterYear">
+          <option value="">Año</option>
+        </select>
+        <button type="button" id="clearFilters" class="secondary-button">Limpiar filtros</button>
+      </div>
+      <div class="entries-summary" id="entriesSummary">Mostrando todos los registros.</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Nombre</th>
+            <th>
+              <div class="th-with-control">
+                <span>Categoría</span>
+              </div>
+            </th>
+            <th>
+              <div class="th-with-control">
+                <span>Cantidad</span>
+                <select id="sortAmount" class="header-sort">
+                  <option value="default">Volver</option>
+                  <option value="desc">Mayor</option>
+                  <option value="asc">Menor</option>
+                </select>
+              </div>
+            </th>
+            <th>
+              <div class="th-with-control">
+                <span>Descripción</span>
+              </div>
+            </th>
+            <th>
+              <div class="th-with-control">
+                <span>Fecha</span>
+                <select id="sortDate" class="header-sort">
+                  <option value="default">Volver</option>
+                  <option value="oldest">Antiguas</option>
+                  <option value="newest">Nuevas</option>
+                  <option value="current">F actual</option>
+                </select>
+              </div>
+            </th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-body"></tbody>
+      </table>
+
+      <div class="totals">
+        <div>Ingresos: <span id="total-income">0</span> €</div>
+        <div>Gastos: <span id="total-expense">0</span> €</div>
+        <div>Saldo: <span id="total">0</span> €</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal Backup -->
+  <div id="backupModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>💾 Opciones de Backup</h3>
+        <button class="modal-close" id="closeBackupModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="backup-options">
+          <button class="backup-option" data-action="export-json">
+            <span class="backup-icon">📥</span>
+            <span class="backup-text">Exportar datos completos (JSON)</span>
+          </button>
+          <button class="backup-option" data-action="save-local">
+            <span class="backup-icon">💾</span>
+            <span class="backup-text">Guardar copia local</span>
+          </button>
+          <button class="backup-option" data-action="export-excel">
+            <span class="backup-icon">📤</span>
+            <span class="backup-text">Exportar a Excel</span>
+          </button>
+          <button class="backup-option" data-action="export-pdf">
+            <span class="backup-icon">📋</span>
+            <span class="backup-text">Exportar a PDF</span>
+          </button>
+          <button class="backup-option" data-action="save-cloud">
+            <span class="backup-icon">☁️</span>
+            <span class="backup-text">Guardar en nube</span>
+          </button>
+          <button class="backup-option" data-action="schedule-backup">
+            <span class="backup-icon">🔄</span>
+            <span class="backup-text">Programar backup automático</span>
+          </button>
+          <button class="backup-option" data-action="generate-report">
+            <span class="backup-icon">📊</span>
+            <span class="backup-text">Generar reporte completo</span>
+          </button>
+          <button class="backup-option" data-action="config-backup">
+            <span class="backup-icon">⚙️</span>
+            <span class="backup-text">Configurar opciones de backup</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal IA -->
+  <div id="iaModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🤖 Asistente IA - Registro</h3>
+        <button class="modal-close" id="closeIAModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="ia-context">
+          <p><strong>Contexto:</strong> Estás en la página de <strong>Registro de Contabilidad</strong></p>
+          <p><strong>Capacidades IA:</strong></p>
+          <ul class="ia-capabilities">
+            <li>📝 Ayudar a categorizar gastos automáticamente</li>
+            <li>🔍 Sugerir descripciones para transacciones</li>
+            <li>📊 Analizar patrones de gastos</li>
+            <li>⚠️ Detectar posibles errores o duplicados</li>
+            <li>💡 Recomendar optimizaciones de categorías</li>
+            <li>📈 Proyectar tendencias basadas en datos históricos</li>
+            <li>🎯 Sugerir metas de ahorro personalizadas</li>
+          </ul>
+        </div>
+        <div class="ia-prompt">
+          <label for="iaPrompt">¿Qué necesitas ayuda con tu registro?</label>
+          <textarea id="iaPrompt" placeholder="Ej: Ayúdame a categorizar estos gastos automáticamente..."></textarea>
+          <button type="button" id="iaSubmit" class="primary-button">Consultar IA</button>
+        </div>
+        <div id="iaResponse" class="ia-response" style="display: none;">
+          <h4>Respuesta IA:</h4>
+          <div id="iaResponseText"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="./node_modules/chart.js/dist/chart.umd.js"></script>
+  
+  <!-- Librerías para exportación profesional -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  
+  <script src="firebase-init-simple.js"></script>
+  <script src="app.js"></script>
+  
+  <!-- Script específico de página -->
+  <script>
+    // Contexto IA para esta página
+    const pageContext = {
+      name: 'registro',
+      title: 'Registro de Contabilidad',
+      capabilities: [
+        'categorizar_gastos',
+        'sugerir_descripciones', 
+        'analizar_patrones',
+        'detectar_errores',
+        'optimizar_categorias',
+        'proyectar_tendencias',
+        'sugerir_metas_ahorro'
+      ]
+    };
+
+    // Inicializar página
+    document.addEventListener('DOMContentLoaded', function() {
+      // Marcar página activa en sidebar
+      document.querySelectorAll('.sidebar-nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById('sidebarBtnRegistro').classList.add('active');
+      
+      // Configurar eventos específicos de esta página
+      setupPageEvents();
+    });
+
+    function setupPageEvents() {
+      // Eventos del modal Backup
+      const backupBtn = document.getElementById('sidebarBtnBackup');
+      const backupModal = document.getElementById('backupModal');
+      const closeBackupModal = document.getElementById('closeBackupModal');
+      
+      backupBtn.addEventListener('click', () => {
+        backupModal.style.display = 'flex';
+      });
+      
+      closeBackupModal.addEventListener('click', () => {
+        backupModal.style.display = 'none';
+      });
+
+      // Eventos del modal IA
+      const iaBtn = document.getElementById('sidebarBtnAI');
+      const iaModal = document.getElementById('iaModal');
+      const closeIAModal = document.getElementById('closeIAModal');
+      const iaSubmit = document.getElementById('iaSubmit');
+      
+      iaBtn.addEventListener('click', () => {
+        iaModal.style.display = 'flex';
+      });
+      
+      closeIAModal.addEventListener('click', () => {
+        iaModal.style.display = 'none';
+      });
+
+      iaSubmit.addEventListener('click', () => {
+        const prompt = document.getElementById('iaPrompt').value;
+        if (prompt.trim()) {
+          // Simular respuesta IA (aquí iría la llamada real a IA)
+          simulateIAResponse(prompt);
+        }
+      });
+
+      // Eventos de opciones de backup
+      document.querySelectorAll('.backup-option').forEach(option => {
+        option.addEventListener('click', function() {
+          const action = this.dataset.action;
+          handleBackupAction(action);
+        });
+      });
+    }
+
+    function simulateIAResponse(prompt) {
+      const responseDiv = document.getElementById('iaResponse');
+      const responseText = document.getElementById('iaResponseText');
+      
+      // Simulación de respuesta IA
+      const responses = {
+        'categorizar': 'He analizado tus gastos y sugiero las siguientes categorías: 🍔 Comida, 🚗 Transporte, 🏠 Vivienda, 📱 Tecnología, 🏥 Salud, 🎮 Entretenimiento.',
+        'analizar': 'Basado en tus datos, he detectado un patrón: tus gastos en comida han aumentado 15% este mes. Considera establecer un presupuesto semanal.',
+        'optimizar': 'Recomiendo: Fusiona las categorías "Restaurantes" y "Comida Rápida" en una sola "Alimentación Fuera de Casa" para mejor seguimiento.'
+      };
+      
+      responseText.textContent = responses[prompt.toLowerCase().includes('categorizar') ? 'categorizar' : 'analizar'];
+      responseDiv.style.display = 'block';
+    }
+
+    function handleBackupAction(action) {
+      const modal = document.getElementById('backupModal');
+      modal.style.display = 'none';
+      
+      switch(action) {
+        case 'export-json':
+          console.log('Exportando registro a JSON...');
+          // Lógica de exportación de registro
+          break;
+        case 'save-local':
+          console.log('Guardando copia local del registro...');
+          // Lógica de guardado local de registro
+          break;
+        case 'export-excel':
+          console.log('Exportando registro a Excel...');
+          // Lógica de exportación Excel de registro
+          break;
+        case 'export-pdf':
+          console.log('Exportando registro a PDF...');
+          // Lógica de exportación PDF de registro
+          break;
+        case 'save-cloud':
+          console.log('Guardando registro en nube...');
+          // Lógica de guardado en nube de registro
+          break;
+        case 'schedule-backup':
+          console.log('Programando backup automático del registro...');
+          // Lógica de programación de backup de registro
+          break;
+        case 'generate-report':
+          console.log('Generando reporte completo del registro...');
+          // Lógica de reporte de registro
+          break;
+        case 'config-backup':
+          console.log('Configurando opciones de backup del registro...');
+          // Lógica de configuración de backup de registro
+          break;
+      }
+    }
+  </script>
+</body>
+</html>
