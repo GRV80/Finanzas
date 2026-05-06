@@ -32,6 +32,8 @@ const filterMonth = document.getElementById("filterMonth");
 
 const filterYear = document.getElementById("filterYear");
 
+const filterType = document.getElementById("filterType");
+
 const clearFiltersBtn = document.getElementById("clearFilters");
 
 const entriesSummary = document.getElementById("entriesSummary");
@@ -212,6 +214,8 @@ const categories = [
 
   "Alquiler",
 
+  "Ayuda Benéfica",
+
   "Bebidas",
 
   "Comida",
@@ -226,15 +230,17 @@ const categories = [
 
   "GASTO FIJO",
 
-  "Gastos Familiares",
+  "Ganancias",
 
   "General",
 
-  "Ganancias",
+  "Gastos Familiares",
 
   "Hogar",
 
   "INGRESO FIJO",
+
+  "Impuestos",
 
   "Intereses",
 
@@ -244,11 +250,11 @@ const categories = [
 
   "Ropa",
 
-  "Salud",
+  "Salida a Comer y Domicilio",
 
   "Salidas",
 
-  "Salida a Comer y Domicilio",
+  "Salud",
 
   "Salario / Nómina",
 
@@ -1387,7 +1393,7 @@ function loadSettings() {
 
       settings = { ...settings, ...parsed };
 
-      if (!parsed.theme || parsed.theme === "blue") {
+      if (!parsed.theme) {
 
         settings.theme = "natural";
 
@@ -1419,7 +1425,7 @@ function applyPersistedState(payload = {}) {
 
     settings = { ...settings, ...payload.settings };
 
-    if (!payload.settings.theme || payload.settings.theme === "blue") {
+    if (!payload.settings.theme) {
 
       settings.theme = "natural";
 
@@ -2273,7 +2279,7 @@ function showExportMenu() {
 
     <div style="display: flex; gap: 10px; justify-content: flex-end;">
 
-      <button onclick="closeExportModal()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f8f9fa; color: #333;">
+      <button class="btn-cancel" onclick="closeExportModal()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f8f9fa; color: #333;">
 
         Cancelar
 
@@ -2321,6 +2327,10 @@ function showExportMenu() {
 
     if (backdrop) backdrop.remove();
 
+    // Remover event listener de ESC
+
+    document.removeEventListener('keydown', escHandler);
+
     // Limpiar la función global
 
     delete window.closeExportModal;
@@ -2329,7 +2339,15 @@ function showExportMenu() {
 
   
 
-  backdrop.onclick = () => closeExportModal();
+  backdrop.onclick = () => window.closeExportModal();
+
+  // Cerrar con tecla ESC
+  const escHandler = function(e) {
+    if (e.key === 'Escape') {
+      window.closeExportModal();
+    }
+  };
+  document.addEventListener('keydown', escHandler);
 
   
 
@@ -2393,7 +2411,7 @@ window.exportAsJSON = function() {
 
     exportedAt: new Date().toISOString(),
 
-    records: gastos,
+    records: getFilteredEntries(),
 
     customColumns: settings.customColumns || [],
 
@@ -2425,9 +2443,11 @@ window.exportAsJSON = function() {
 
 window.exportAsCSV = function() {
 
-  if (gastos.length === 0) {
+  const filteredEntries = getFilteredEntries();
 
-    alert("No hay registros para exportar");
+  if (filteredEntries.length === 0) {
+
+    alert("No hay registros filtrados para exportar");
 
     if (window.closeExportModal) closeExportModal();
 
@@ -2455,7 +2475,7 @@ window.exportAsCSV = function() {
 
     headers.join(";"), // Usar punto y coma para compatibilidad con Excel
 
-    ...gastos.map(gasto => 
+    ...filteredEntries.map(gasto => 
 
       visibleColumns.map(col => {
 
@@ -2521,9 +2541,11 @@ window.exportAsCSV = function() {
 
 window.exportAsExcel = function() {
 
-  if (gastos.length === 0) {
+  const filteredEntries = getFilteredEntries();
 
-    alert("No hay registros para exportar");
+  if (filteredEntries.length === 0) {
+
+    alert("No hay registros filtrados para exportar");
 
     if (window.closeExportModal) closeExportModal();
 
@@ -2561,7 +2583,7 @@ window.exportAsExcel = function() {
 
       headers, // Encabezados
 
-      ...gastos.map(gasto => 
+      ...filteredEntries.map(gasto => 
 
         visibleColumns.map(col => {
 
@@ -3211,7 +3233,7 @@ window.showImportMenu = function() {
 
     <div style="display: flex; gap: 10px; justify-content: flex-end;">
 
-      <button onclick="closeImportModal()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f8f9fa; color: #333;">
+      <button class="btn-cancel" onclick="closeImportModal()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f8f9fa; color: #333;">
 
         Cancelar
 
@@ -3259,13 +3281,25 @@ window.showImportMenu = function() {
 
     if (backdrop) backdrop.remove();
 
+    // Remover event listener de ESC
+
+    document.removeEventListener('keydown', escHandler);
+
     delete window.closeImportModal;
 
   };
 
   
 
-  backdrop.onclick = () => closeImportModal();
+  backdrop.onclick = () => window.closeImportModal();
+
+  // Cerrar con tecla ESC
+  const escHandler = function(e) {
+    if (e.key === 'Escape') {
+      window.closeImportModal();
+    }
+  };
+  document.addEventListener('keydown', escHandler);
 
   
 
@@ -3443,7 +3477,7 @@ window.showAlmanaqueExportMenu = function() {
 
     <div style="display: flex; gap: 10px; justify-content: flex-end;">
 
-      <button onclick="closeAlmanaqueExportModal()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f8f9fa; color: #333;">
+      <button class="btn-cancel" onclick="closeAlmanaqueExportModal()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f8f9fa; color: #333;">
 
         Cancelar
 
@@ -3777,7 +3811,7 @@ window.showAlmanaqueImportMenu = function() {
 
     <div style="display: flex; gap: 10px; justify-content: flex-end;">
 
-      <button onclick="closeAlmanaqueImportModal()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f8f9fa; color: #333;">
+      <button class="btn-cancel" onclick="closeAlmanaqueImportModal()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f8f9fa; color: #333;">
 
         Cancelar
 
@@ -3831,7 +3865,7 @@ window.showAlmanaqueImportMenu = function() {
 
   
 
-  backdrop.onclick = () => closeAlmanaqueImportModal();
+  backdrop.onclick = () => window.closeAlmanaqueImportModal();
 
   
 
@@ -4787,7 +4821,7 @@ function getAlmanaqueSummaryData() {
 
   const typeFilter = almanaqueTypeFilter?.value || "";
 
-  const filtered = gastos.filter(g => {
+  const filtered = getFilteredEntries().filter(g => {
 
     const date = new Date(g.fecha);
 
@@ -6807,18 +6841,36 @@ function updateDateFilterVisibility() {
   if (filterDay) {
 
     filterDay.hidden = tableFilters.dateMode !== "day";
+    // Controlar style.display para compatibilidad con header
+    if (tableFilters.dateMode === "day") {
+      filterDay.style.display = "block";
+    } else {
+      filterDay.style.display = "none";
+    }
 
   }
 
   if (filterMonth) {
 
     filterMonth.hidden = !["day", "month"].includes(tableFilters.dateMode);
+    // Controlar style.display para compatibilidad con header
+    if (["day", "month"].includes(tableFilters.dateMode)) {
+      filterMonth.style.display = "block";
+    } else {
+      filterMonth.style.display = "none";
+    }
 
   }
 
   if (filterYear) {
 
     filterYear.hidden = !["day", "month", "year"].includes(tableFilters.dateMode);
+    // Controlar style.display para compatibilidad con header
+    if (["day", "month", "year"].includes(tableFilters.dateMode)) {
+      filterYear.style.display = "block";
+    } else {
+      filterYear.style.display = "none";
+    }
 
   }
 
@@ -7236,13 +7288,11 @@ function getPeriodSummary(period, refDate) {
 
 
 
-  gastos.forEach(record => {
+  getFilteredEntries().forEach(record => {
 
     const date = new Date(record.fecha);
 
     if (isNaN(date.getTime()) || date < start || date > end) return;
-
-
 
     const amount = Number(record.cantidad) || 0;
 
@@ -7371,7 +7421,8 @@ function updateDashboard() {
   const { start, end } = getPeriodRange(period, ref);
 
   // Filtrar datos reales de gastos
-  const filtered = gastos.filter(g => {
+
+  const filtered = getFilteredEntries().filter(g => {
 
     const d = new Date(g.fecha);
 
@@ -13240,7 +13291,8 @@ function showPanel(panelId) {
 
   currentActivePanel = panelId;
 
-  
+  // Guardar panel activo en localStorage
+  localStorage.setItem('activePanel', panelId);
 
   console.log(`🔄 Panel cambiado a: ${panelId}`);
 
@@ -13282,6 +13334,98 @@ function updateSidebarButtons(activePanelId) {
 
   });
 
+  // Actualizar botones del header para que funcionen como control remoto
+  updateHeaderActionsAsRemote(activePanelId);
+
+}
+
+// Función para que el header funcione como control remoto
+function updateHeaderActionsAsRemote(activePanelId) {
+  // Conectar botones del header con los botones reales según la sección activa
+  
+  // Botón Exportar del header
+  const headerExportBtn = document.getElementById('btnExport');
+  if (headerExportBtn) {
+    headerExportBtn.onclick = () => {
+      switch(activePanelId) {
+        case 'entriesPanel':
+          const exportEntries = document.querySelector('#entriesPanel .panel-actions button[id*="Export"]');
+          if (exportEntries) exportEntries.click();
+          break;
+        case 'almanaquePanelSection':
+          const exportAlmanaque = document.querySelector('#almanaquePanelSection .panel-actions button[id*="Export"]');
+          if (exportAlmanaque) exportAlmanaque.click();
+          break;
+        case 'dashboardPanel':
+          const exportDashboard = document.querySelector('#dashboardPanel .panel-actions button[id*="Export"]');
+          if (exportDashboard) exportDashboard.click();
+          break;
+      }
+    };
+  }
+
+  // Botón Importar del header
+  const headerImportBtn = document.getElementById('btnImport');
+  if (headerImportBtn) {
+    headerImportBtn.onclick = () => {
+      switch(activePanelId) {
+        case 'entriesPanel':
+          const importEntries = document.querySelector('#entriesPanel .panel-actions button[id*="Import"]');
+          if (importEntries) importEntries.click();
+          break;
+        case 'almanaquePanelSection':
+          const importAlmanaque = document.querySelector('#almanaquePanelSection .panel-actions button[id*="Import"]');
+          if (importAlmanaque) importAlmanaque.click();
+          break;
+        case 'dashboardPanel':
+          // Dashboard no tiene importar, pero si tuviera:
+          const importDashboard = document.querySelector('#dashboardPanel .panel-actions button[id*="Import"]');
+          if (importDashboard) importDashboard.click();
+          break;
+      }
+    };
+  }
+
+  // Botón Vaciar del header
+  const headerClearBtn = document.getElementById('btnClear');
+  if (headerClearBtn) {
+    headerClearBtn.onclick = () => {
+      switch(activePanelId) {
+        case 'entriesPanel':
+          const clearEntries = document.querySelector('#entriesPanel .panel-actions button[id*="Clear"]');
+          if (clearEntries) clearEntries.click();
+          break;
+        case 'almanaquePanelSection':
+          const clearAlmanaque = document.querySelector('#almanaquePanelSection .panel-actions button[id*="Clear"]');
+          if (clearAlmanaque) clearAlmanaque.click();
+          break;
+        case 'dashboardPanel':
+          // Dashboard no tiene vaciar
+          break;
+      }
+    };
+  }
+
+  // Botón Ocultar del header
+  const headerToggleBtn = document.getElementById('toggleEntries');
+  if (headerToggleBtn) {
+    headerToggleBtn.onclick = () => {
+      switch(activePanelId) {
+        case 'entriesPanel':
+          const toggleEntries = document.querySelector('#entriesPanel .panel-actions .panel-toggle');
+          if (toggleEntries) toggleEntries.click();
+          break;
+        case 'almanaquePanelSection':
+          const toggleAlmanaque = document.querySelector('#almanaquePanelSection .panel-actions .panel-toggle');
+          if (toggleAlmanaque) toggleAlmanaque.click();
+          break;
+        case 'dashboardPanel':
+          const toggleDashboard = document.querySelector('#dashboardPanel .panel-actions .panel-toggle');
+          if (toggleDashboard) toggleDashboard.click();
+          break;
+      }
+    };
+  }
 }
 
 
@@ -13301,18 +13445,33 @@ function updateSidebarTheme() {
 // Función para inicializar el sidebar al cargar la app
 
 function setupSidebarNavigation() {
-
-  // Mostrar solo el panel inicial (Registro)
-
-  showPanel("entriesPanel");
-
+  // Cargar panel activo desde localStorage si existe
+  const savedPanel = localStorage.getItem('activePanel');
+  const panelToShow = savedPanel || "entriesPanel";
   
-
+  // Mostrar el panel guardado o el inicial (Registro)
+  showPanel(panelToShow);
+  
   // Inicializar los event listeners
-
   initializeSidebar();
-
 }
+
+
+// Función para guardar el panel activo en localStorage
+function saveActivePanel(panelId) {
+  localStorage.setItem('activePanel', panelId);
+}
+
+
+// Agregar evento para guardar el panel activo al cambiar de panel
+document.querySelectorAll(".sidebar-nav-btn").forEach(btn => {
+  btn.onclick = () => {
+    const panel = btn.dataset.panel;
+    if (panel) {
+      saveActivePanel(panel);
+    }
+  };
+});
 
 
 
@@ -13352,7 +13511,9 @@ async function initializeApp() {
 
   }
 
-  applyTheme(settings.theme);
+  // Aplicar tema guardado desde settings
+  currentTheme = settings.theme || "natural";
+  applyTheme(currentTheme);
 
 
 
@@ -13361,10 +13522,6 @@ async function initializeApp() {
     dashboardDate.value = new Date().toISOString().slice(0, 10);
 
   }
-
-
-
-  applyTheme(currentTheme);
 
   populateAlmanaqueSelectors();
 
@@ -13504,7 +13661,7 @@ if (toggleDashboard) {
 
 if (btnExportDashboard) {
 
-  btnExportDashboard.addEventListener("click", exportDashboardSummary);
+  btnExportDashboard.addEventListener("click", showExportMenu);
 
 }
 
@@ -14216,6 +14373,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
   }
 
+  // Event listener global para botones Cancelar de modales
+  document.addEventListener("click", (e) => {
+    if (e.target.matches(".btn-cancel")) {
+      const modal = e.target.closest('[style*="z-index: 10000"]');
+      if (modal) {
+        modal.remove();
+      }
+      const backdrop = document.querySelector('[style*="z-index: 9999"]');
+      if (backdrop) {
+        backdrop.remove();
+      }
+    }
+  });
+
+  // Event listener global para tecla ESC en modales
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const modal = document.querySelector('[style*="z-index: 10000"]');
+      if (modal) {
+        modal.remove();
+      }
+      const backdrop = document.querySelector('[style*="z-index: 9999"]');
+      if (backdrop) {
+        backdrop.remove();
+      }
+    }
+  });
+
   
 
   // Detectar si estamos en Electron y configurar zoom adicional
@@ -14756,6 +14941,8 @@ if (clearFiltersBtn) {
 
     if (filterYear) filterYear.value = "";
 
+    if (filterType) filterType.value = "";
+
     refreshDateFilterOptions();
 
     updateDateFilterVisibility();
@@ -14767,6 +14954,13 @@ if (clearFiltersBtn) {
 }
 
 
+
+if (filterType) {
+  filterType.addEventListener("change", () => {
+    tableFilters.tipo = filterType.value;
+    render();
+  });
+}
 
 if (almanaqueTypeFilter) {
 
@@ -15220,26 +15414,29 @@ if (almanaqueViewMode) {
 
 
 
-initializeApp().catch(error => {
-
-  console.error("No se pudo iniciar la app correctamente.", error);
-
-  persistenceBlocked = true;
-
+initializeApp().then(() => {
+  // Cargar tema guardado desde settings antes de aplicarlo
+  currentTheme = settings.theme || "natural";
+  
   buildFormFields();
-
   refreshDateFilterOptions();
-
   applyTheme(currentTheme);
-
   populateAlmanaqueSelectors();
-
   renderAlmanaque();
-
   render();
-
   initializeDesktopShell();
-
+}).catch(error => {
+  console.error("No se pudo iniciar la app correctamente.", error);
+  persistenceBlocked = true;
+  buildFormFields();
+  refreshDateFilterOptions();
+  // En caso de error, usar tema por defecto
+  currentTheme = "natural";
+  applyTheme(currentTheme);
+  populateAlmanaqueSelectors();
+  renderAlmanaque();
+  render();
+  initializeDesktopShell();
 });
 
 
@@ -15434,4 +15631,173 @@ document.querySelectorAll(".sidebar-nav-btn").forEach(btn => {
     console.log("Click en:", btn.textContent.trim());
   });
 });
+
+// Función para inicializar el Header Principal
+function initializeHeader() {
+  console.log("🔧 Inicializando header principal...");
+  
+  // Botones Opciones
+  const headerResetTheme = document.getElementById('headerResetTheme');
+  const headerIA = document.getElementById('headerIA');
+  const saveBtn = document.getElementById('saveBtn');
+  const saveAsBtn = document.getElementById('saveAsBtn');
+  const configBtn = document.getElementById('configBtn');
+  
+  // Botones Acciones
+  const btnExport = document.getElementById('btnExport');
+  const btnImport = document.getElementById('btnImport');
+  const btnClear = document.getElementById('btnClear');
+  const toggleEntries = document.getElementById('toggleEntries');
+  const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+  const filterBtns = document.querySelectorAll('.filter-btn');
+  
+  // IA
+  if (headerIA) {
+    headerIA.addEventListener('click', () => {
+      console.log("🤖 Abriendo IA...");
+      
+      // Disparar el botón original del sidebar
+      const originalBtn = document.getElementById('sidebarBtnAI');
+      if (originalBtn) {
+        originalBtn.click();
+      } else {
+        showNotification('Función IA no disponible', 'error');
+      }
+    });
+  }
+  
+  // Restablecer tema
+  if (headerResetTheme) {
+    headerResetTheme.addEventListener('click', () => {
+      console.log("🔄 Restableciendo tema...");
+      
+      // Usar la lógica existente
+      const themeSelect = document.getElementById('headerThemeSelect');
+      if (themeSelect) {
+        themeSelect.value = 'natural';
+        themeSelect.dispatchEvent(new Event('change'));
+      }
+      
+      showNotification('Tema restablecido', 'success');
+    });
+  }
+  
+  // Guardar
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      console.log('💾 Guardando datos...');
+      saveData();
+      showNotification('Datos guardados correctamente', 'success');
+    });
+  }
+  
+  // Guardar Como
+  if (saveAsBtn) {
+    saveAsBtn.addEventListener('click', () => {
+      console.log('💾 Guardar como...');
+      showNotification('Función Guardar como en desarrollo', 'info');
+    });
+  }
+  
+  // Configuración
+  if (configBtn) {
+    configBtn.addEventListener('click', () => {
+      console.log('⚙️ Abriendo configuración...');
+      showPanel('configPanel');
+    });
+  }
+  
+  // Exportar - ya manejado por el event listener anterior (exportData)
+  
+  // Importar - ya manejado por el event listener anterior (showImportMenu)
+  
+  // Vaciar
+  if (btnClear) {
+    btnClear.addEventListener('click', () => {
+      console.log('🗑️ Vaciando datos...');
+      // Usar la lógica existente
+      const originalBtn = document.querySelector('#entriesPanel #btnClear');
+      if (originalBtn) {
+        originalBtn.click();
+      } else {
+        showNotification('Función Vaciar no disponible', 'error');
+      }
+    });
+  }
+  
+  // Ocultar/Mostrar panel
+  if (toggleEntries) {
+    toggleEntries.addEventListener('click', () => {
+      console.log('👁️ Toggle panel...');
+      // Usar la lógica existente
+      const originalBtn = document.querySelector('#entriesPanel #toggleEntries');
+      if (originalBtn) {
+        originalBtn.click();
+      } else {
+        const entriesBody = document.getElementById('entriesBody');
+        if (entriesBody) {
+          entriesBody.style.display = entriesBody.style.display === 'none' ? 'block' : 'none';
+          showNotification(entriesBody.style.display === 'none' ? 'Panel oculto' : 'Panel visible', 'info');
+        }
+      }
+    });
+  }
+  
+  // Filtros - Funcionalidad original restaurada
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filter = btn.dataset.filter;
+      console.log(`🔍 Aplicando filtro: ${filter}`);
+      
+      // Quitar active de todos los botones
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Aplicar lógica de filtros original
+      if (filter === 'all') {
+        // Mostrar todos los registros
+        render();
+        showNotification('Mostrando todos los registros', 'success');
+      } else if (filter === 'day') {
+        // Filtrar por día actual
+        const today = new Date().toISOString().slice(0, 10);
+        const filtered = gastos.filter(g => g.fecha && g.fecha.startsWith(today));
+        render(filtered);
+        showNotification('Filtrado por día actual', 'success');
+      } else if (filter === 'month') {
+        // Filtrar por mes actual
+        const now = new Date();
+        const currentMonth = now.toISOString().slice(0, 7);
+        const filtered = gastos.filter(g => g.fecha && g.fecha.startsWith(currentMonth));
+        render(filtered);
+        showNotification('Filtrado por mes actual', 'success');
+      } else if (filter === 'year') {
+        // Filtrar por año actual
+        const currentYear = new Date().getFullYear().toString();
+        const filtered = gastos.filter(g => g.fecha && g.fecha.includes(currentYear));
+        render(filtered);
+        showNotification('Filtrado por año actual', 'success');
+      }
+    });
+  });
+  
+  // Reset filtros - Funcionalidad original restaurada
+  if (resetFiltersBtn) {
+    resetFiltersBtn.addEventListener('click', () => {
+      console.log('🔄 Limpiando filtros...');
+      
+      // Quitar active de todos los botones
+      filterBtns.forEach(b => b.classList.remove('active'));
+      
+      // Resetear lógica de filtros original
+      render(); // Mostrar todos los registros
+      showNotification('Filtros limpiados - Mostrando todos los registros', 'success');
+    });
+  }
+  
+  console.log("✅ Header principal inicializado correctamente");
+}
+
+// Inicializar header después de cargar DOM
+initializeHeader();
 
