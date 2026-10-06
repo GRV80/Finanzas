@@ -1,0 +1,723 @@
+/* ===================================================================
+   DASHBOARD MODERNO - Estilos tipo SaaS (Notion/Linear/Stripe)
+   =================================================================== */
+
+/* Variables CSS para el Dashboard */
+:root {
+  /* Colores principales */
+  --dashboard-bg: #ffffff;
+  --dashboard-surface: #f8fafc;
+  --dashboard-border: #e2e8f0;
+  --dashboard-shadow: rgba(0, 0, 0, 0.04);
+  --dashboard-shadow-hover: rgba(0, 0, 0, 0.08);
+  
+  /* Colores de texto */
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --text-inverse: #ffffff;
+  
+  /* Colores de estado */
+  --success: #10b981;
+  --success-light: #d1fae5;
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --error: #ef4444;
+  --error-light: #fee2e2;
+  --info: #3b82f6;
+  --info-light: #dbeafe;
+  
+  /* Colores financieros */
+  --income-color: #10b981;
+  --expense-color: #ef4444;
+  --balance-color: #3b82f6;
+  
+  /* Espaciado */
+  --dashboard-padding: 24px;
+  --widget-padding: 20px;
+  --widget-gap: 20px;
+  --border-radius: 12px;
+  --border-radius-sm: 8px;
+  --border-radius-lg: 16px;
+  
+  /* Sombras */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Contenedor Principal del Dashboard */
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--dashboard-padding);
+  background: var(--dashboard-bg);
+  min-height: 100vh;
+}
+
+/* Header del Dashboard */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--dashboard-border);
+}
+
+.dashboard-welcome h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.025em;
+}
+
+.dashboard-subtitle {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin: 0;
+  font-weight: 400;
+}
+
+.dashboard-actions .btn-refresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--dashboard-bg);
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dashboard-actions .btn-refresh:hover {
+  background: var(--dashboard-surface);
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Grid de Widgets */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--widget-gap);
+  grid-auto-rows: min-content;
+}
+
+/* Posicionamiento de Widgets en el Grid */
+.widget-financial-summary {
+  grid-column: 1 / 7;
+  grid-row: 1;
+}
+
+.widget-recent-activity {
+  grid-column: 7 / 13;
+  grid-row: 1;
+}
+
+.widget-alerts {
+  grid-column: 1 / 5;
+  grid-row: 2;
+}
+
+.widget-upcoming-payments {
+  grid-column: 5 / 9;
+  grid-row: 2;
+}
+
+.widget-quick-tasks {
+  grid-column: 9 / 13;
+  grid-row: 2;
+}
+
+/* Estilos Base de Widgets */
+.widget {
+  background: var(--dashboard-bg);
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.widget:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--widget-padding);
+  border-bottom: 1px solid var(--dashboard-border);
+  background: var(--dashboard-surface);
+}
+
+.widget-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.widget-badge {
+  padding: 4px 12px;
+  background: var(--info-light);
+  color: var(--info);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.widget-badge.urgent {
+  background: var(--error-light);
+  color: var(--error);
+}
+
+.widget-action {
+  background: none;
+  border: none;
+  color: var(--info);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm);
+  transition: all 0.2s ease;
+}
+
+.widget-action:hover {
+  background: var(--info-light);
+}
+
+.widget-content {
+  padding: var(--widget-padding);
+}
+
+/* Widget: Resumen Financiero */
+.financial-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.financial-card {
+  padding: 20px;
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.2s ease;
+}
+
+.financial-card.income {
+  background: linear-gradient(135deg, var(--success-light) 0%, #ffffff 100%);
+  border: 1px solid var(--success);
+}
+
+.financial-card.expense {
+  background: linear-gradient(135deg, var(--error-light) 0%, #ffffff 100%);
+  border: 1px solid var(--error);
+}
+
+.financial-card.balance {
+  background: linear-gradient(135deg, var(--info-light) 0%, #ffffff 100%);
+  border: 1px solid var(--info);
+}
+
+.financial-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.financial-icon {
+  font-size: 2rem;
+  opacity: 0.8;
+}
+
+.financial-data {
+  flex: 1;
+}
+
+.financial-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.financial-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  letter-spacing: -0.025em;
+}
+
+.financial-trend {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.financial-trend.positive {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.financial-trend.negative {
+  background: var(--error-light);
+  color: var(--error);
+}
+
+.financial-trend.neutral {
+  background: var(--info-light);
+  color: var(--info);
+}
+
+/* Widget: Actividad Reciente */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--border-radius-sm);
+  transition: all 0.2s ease;
+}
+
+.activity-item:hover {
+  background: var(--dashboard-surface);
+}
+
+.activity-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.activity-icon.income {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.activity-icon.expense {
+  background: var(--error-light);
+  color: var(--error);
+}
+
+.activity-details {
+  flex: 1;
+}
+
+.activity-description {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.activity-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.activity-amount {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.activity-amount:has-text("+") {
+  color: var(--success);
+}
+
+.activity-amount:has-text("-") {
+  color: var(--error);
+}
+
+.activity-time {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+/* Widget: Alertas */
+.alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--border-radius-sm);
+  border-left: 4px solid;
+  transition: all 0.2s ease;
+}
+
+.alert-item.urgent {
+  background: var(--error-light);
+  border-left-color: var(--error);
+}
+
+.alert-item.warning {
+  background: var(--warning-light);
+  border-left-color: var(--warning);
+}
+
+.alert-item.info {
+  background: var(--info-light);
+  border-left-color: var(--info);
+}
+
+.alert-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+}
+
+.alert-description {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Widget: Próximos Pagos */
+.payment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.payment-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--border-radius-sm);
+  transition: all 0.2s ease;
+}
+
+.payment-item:hover {
+  background: var(--dashboard-surface);
+}
+
+.payment-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--dashboard-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.payment-details {
+  flex: 1;
+}
+
+.payment-description {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.payment-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.payment-amount {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.payment-date {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+/* Widget: Tareas Rápidas */
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--border-radius-sm);
+  transition: all 0.2s ease;
+}
+
+.task-item:hover {
+  background: var(--dashboard-surface);
+}
+
+.task-checkbox {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.task-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--info);
+  cursor: pointer;
+}
+
+.task-content {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.task-description {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.task-priority {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.task-priority.high {
+  background: var(--error-light);
+  color: var(--error);
+}
+
+.task-priority.medium {
+  background: var(--warning-light);
+  color: var(--warning);
+}
+
+.task-priority.low {
+  background: var(--info-light);
+  color: var(--info);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+  
+  .widget-financial-summary {
+    grid-column: 1 / 5;
+    grid-row: 1;
+  }
+  
+  .widget-recent-activity {
+    grid-column: 5 / 9;
+    grid-row: 1;
+  }
+  
+  .widget-alerts {
+    grid-column: 1 / 3;
+    grid-row: 2;
+  }
+  
+  .widget-upcoming-payments {
+    grid-column: 3 / 5;
+    grid-row: 2;
+  }
+  
+  .widget-quick-tasks {
+    grid-column: 5 / 9;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 16px;
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .dashboard-welcome h1 {
+    font-size: 1.5rem;
+  }
+  
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .widget-financial-summary,
+  .widget-recent-activity,
+  .widget-alerts,
+  .widget-upcoming-payments,
+  .widget-quick-tasks {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  
+  .financial-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .financial-card {
+    padding: 16px;
+  }
+  
+  .financial-value {
+    font-size: 1.25rem;
+  }
+  
+  .widget-header,
+  .widget-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-container {
+    padding: 12px;
+  }
+  
+  .dashboard-welcome h1 {
+    font-size: 1.25rem;
+  }
+  
+  .dashboard-subtitle {
+    font-size: 0.875rem;
+  }
+  
+  .dashboard-actions .btn-refresh {
+    padding: 10px 16px;
+    font-size: 0.75rem;
+  }
+  
+  .financial-card {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .financial-icon {
+    font-size: 1.5rem;
+  }
+  
+  .financial-value {
+    font-size: 1.125rem;
+  }
+  
+  .activity-item,
+  .alert-item,
+  .payment-item,
+  .task-item {
+    padding: 8px;
+  }
+}
+
+/* Animaciones suaves */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.widget {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.widget:nth-child(1) { animation-delay: 0.1s; }
+.widget:nth-child(2) { animation-delay: 0.2s; }
+.widget:nth-child(3) { animation-delay: 0.3s; }
+.widget:nth-child(4) { animation-delay: 0.4s; }
+.widget:nth-child(5) { animation-delay: 0.5s; }
+
+/* Estados de hover mejorados */
+.widget:hover {
+  border-color: #cbd5e1;
+}
+
+.financial-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.activity-item:hover,
+.payment-item:hover,
+.task-item:hover {
+  transform: translateX(4px);
+}
+
+/* Focus states para accesibilidad */
+.widget-action:focus,
+.btn-refresh:focus,
+.task-checkbox input:focus {
+  outline: 2px solid var(--info);
+  outline-offset: 2px;
+}
+
+/* Scrollbar personalizada */
+.widget-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.widget-content::-webkit-scrollbar-track {
+  background: var(--dashboard-surface);
+}
+
+.widget-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.widget-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
