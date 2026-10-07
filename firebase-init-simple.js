@@ -327,8 +327,9 @@ window.recuperacionAGRESIVA = function() {
 };
 
 // Ejecutar recuperación agresiva inmediatamente
-console.log("🚀 EJECUTANDO RECUPERACIÓN AGRESIVA INMEDIATA");
-window.recuperacionAGRESIVA();
+// DESACTIVADO: Recuperación automática eliminada para evitar modificaciones no deseadas
+// console.log("🚀 EJECUTANDO RECUPERACIÓN AGRESIVA INMEDIATA");
+// window.recuperacionAGRESIVA();
 
 // SOLUCIÓN DEFINITIVA - INSERCIÓN DIRECTA
 window.solucionDefinitiva = function() {
@@ -525,9 +526,10 @@ window.solucionDefinitiva = function() {
 };
 
 // Ejecutar solución definitiva
-setTimeout(() => {
-  window.solucionDefinitiva();
-}, 2000);
+// DESACTIVADO: Ejecución automática eliminada para evitar modificaciones no deseadas
+// setTimeout(() => {
+//   window.solucionDefinitiva();
+// }, 2000);
 
 // Función MANUAL para recuperar datos reales
 window.recuperarMisDatos = function() {
